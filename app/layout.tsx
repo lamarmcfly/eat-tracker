@@ -24,15 +24,27 @@ export default function RootLayout({
               <Link href="/" className="text-xl font-bold text-gray-800 hover:text-blue-600 transition-colors">
                 E.A.T. Tracker
               </Link>
-              <div className="flex gap-6">
-                <Link href="/log" className="text-gray-600 hover:text-blue-600 font-medium transition-colors">
+              <div className="flex gap-2 md:gap-4">
+                <Link href="/log" className="text-gray-600 hover:text-blue-600 font-medium transition-colors text-xs md:text-base">
                   Log
                 </Link>
-                <Link href="/insights" className="text-gray-600 hover:text-blue-600 font-medium transition-colors">
+                <Link href="/import" className="text-gray-600 hover:text-blue-600 font-medium transition-colors text-xs md:text-base">
+                  Import
+                </Link>
+                <Link href="/insights" className="text-gray-600 hover:text-blue-600 font-medium transition-colors text-xs md:text-base">
                   Insights
                 </Link>
-                <Link href="/plan" className="text-gray-600 hover:text-blue-600 font-medium transition-colors">
+                <Link href="/system-insights" className="text-gray-600 hover:text-blue-600 font-medium transition-colors text-xs md:text-base">
+                  Systems
+                </Link>
+                <Link href="/recommendations" className="text-gray-600 hover:text-blue-600 font-medium transition-colors text-xs md:text-base">
+                  Learn
+                </Link>
+                <Link href="/plan" className="text-gray-600 hover:text-blue-600 font-medium transition-colors text-xs md:text-base">
                   Plan
+                </Link>
+                <Link href="/export" className="text-gray-600 hover:text-blue-600 font-medium transition-colors text-xs md:text-base">
+                  Export
                 </Link>
               </div>
             </div>

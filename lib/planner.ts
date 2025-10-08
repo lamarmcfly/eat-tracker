@@ -1,7 +1,20 @@
 // Evidence-based study plan generation
-import { TopicPattern, StudyBlock, StudyPlan } from './types';
+import { TopicPattern, StudyBlock, StudyPlan, ErrorLog } from './types';
+import { generateEnhancedStudyPlan } from './scheduler';
 
-export function generateStudyPlan(patterns: TopicPattern[]): StudyPlan {
+// Legacy function for backward compatibility
+export function generateStudyPlan(patterns: TopicPattern[], errors?: ErrorLog[], examDate?: Date): StudyPlan {
+  // If no errors provided, use legacy simple scheduler
+  if (!errors || errors.length === 0) {
+    return generateLegacyStudyPlan(patterns);
+  }
+
+  // Use new enhanced scheduler
+  return generateEnhancedStudyPlan(patterns, errors, examDate);
+}
+
+// Original simple scheduler (kept for fallback)
+function generateLegacyStudyPlan(patterns: TopicPattern[]): StudyPlan {
   const blocks: StudyBlock[] = [];
   const weekStart = new Date();
   weekStart.setHours(0, 0, 0, 0);

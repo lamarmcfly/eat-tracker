@@ -11,6 +11,7 @@ export function analyzePatterns(errors: ErrorLog[]): TopicPattern[] {
       topicMap.set(key, {
         topic: error.topic,
         system: error.system,
+        systemId: error.systemId, // Include taxonomy ID for priority calculations
         errorCount: 0,
         errorTypes: {
           knowledge: 0,

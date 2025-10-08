@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ErrorLog, ORGAN_SYSTEMS, ErrorType, Confidence } from '@/lib/types';
+import { ErrorLog, ORGAN_SYSTEMS, ErrorType, Confidence, CognitiveLevel } from '@/lib/types';
 import { storage } from '@/lib/storage';
 
 export default function QuickLog() {
@@ -12,6 +12,7 @@ export default function QuickLog() {
   const [topic, setTopic] = useState('');
   const [errorType, setErrorType] = useState<ErrorType>('knowledge');
   const [confidence, setConfidence] = useState<Confidence>('guessed');
+  const [cognitiveLevel, setCognitiveLevel] = useState<CognitiveLevel | ''>('');
   const [nextSteps, setNextSteps] = useState(['']);
 
   const addNextStep = () => setNextSteps([...nextSteps, '']);
@@ -35,6 +36,7 @@ export default function QuickLog() {
       topic,
       errorType,
       confidence,
+      cognitiveLevel: cognitiveLevel || undefined,
       nextSteps: nextSteps.filter(s => s.trim()),
     };
 
@@ -139,6 +141,32 @@ export default function QuickLog() {
                     }`}
                   >
                     {conf.charAt(0).toUpperCase() + conf.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Cognitive Level */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Question Type (Optional)
+              </label>
+              <p className="text-xs text-gray-500 mb-3">
+                First-order: recall & understanding • Higher-order: analysis & synthesis
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                {(['first-order', 'higher-order'] as CognitiveLevel[]).map(level => (
+                  <button
+                    key={level}
+                    type="button"
+                    onClick={() => setCognitiveLevel(cognitiveLevel === level ? '' : level)}
+                    className={`px-4 py-3 rounded-lg font-medium transition-all ${
+                      cognitiveLevel === level
+                        ? 'bg-purple-600 text-white shadow-md'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {level === 'first-order' ? 'First-Order' : 'Higher-Order'}
                   </button>
                 ))}
               </div>

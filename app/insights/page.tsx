@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { storage } from '@/lib/storage';
-import { analyzePatterns, getPriorityList, getErrorTrends } from '@/lib/insights';
+import { analyzePatterns, getErrorTrends } from '@/lib/insights';
+import { getTopPriorities } from '@/lib/priority';
 import { ErrorLog, TopicPattern } from '@/lib/types';
 
 export default function Insights() {
@@ -15,7 +16,8 @@ export default function Insights() {
     setPatterns(analyzePatterns(loadedErrors));
   }, []);
 
-  const priorities = getPriorityList(patterns);
+  // Use new priority system
+  const priorities = patterns.length > 0 ? getTopPriorities(patterns, errors, 10) : [];
   const trends = getErrorTrends(errors);
 
   const errorTypeColors = {
@@ -23,6 +25,20 @@ export default function Insights() {
     reasoning: 'bg-orange-500',
     process: 'bg-yellow-500',
     time: 'bg-purple-500',
+  };
+
+  const urgencyColors = {
+    urgent: 'border-red-400 bg-red-50',
+    high: 'border-orange-400 bg-orange-50',
+    moderate: 'border-yellow-400 bg-yellow-50',
+    low: 'border-blue-400 bg-blue-50',
+  };
+
+  const urgencyIcons = {
+    urgent: '🔴',
+    high: '🟠',
+    moderate: '🟡',
+    low: '🔵',
   };
 
   const totalErrors = errors.length;
@@ -67,23 +83,35 @@ export default function Insights() {
                 {priorities.length === 0 ? (
                   <p className="text-gray-500">Not enough data for priorities yet.</p>
                 ) : (
-                  priorities.map((item) => (
-                    <div
-                      key={`${item.system}-${item.topic}`}
-                      className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
-                          {item.priority}
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-gray-800">{item.topic}</h3>
-                          <p className="text-sm text-gray-500">{item.system}</p>
-                          <p className="text-sm text-gray-700 mt-1">{item.reasoning}</p>
+                  priorities.map((item) => {
+                    const urgency = item.urgency || 'moderate';
+                    return (
+                      <div
+                        key={`${item.system}-${item.topic}`}
+                        className={`border-2 rounded-lg p-4 hover:shadow-md transition-shadow ${urgencyColors[urgency]}`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="flex-shrink-0 text-2xl">
+                            {urgencyIcons[urgency]}
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-semibold text-gray-800">{item.topic}</h3>
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-700 uppercase font-medium">
+                                {urgency}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-600 mb-2">{item.system}</p>
+                            {item.reasonChip && (
+                              <div className="inline-block px-3 py-1 bg-white border border-gray-300 rounded-full text-sm text-gray-700">
+                                {item.reasonChip}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>
