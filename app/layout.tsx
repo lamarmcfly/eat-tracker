@@ -1,0 +1,45 @@
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import Link from "next/link";
+import "./globals.css";
+
+const inter = Inter({ subsets: ["latin"] });
+
+export const metadata: Metadata = {
+  title: "E.A.T. Tracker - Error Analysis & Targeted Learning",
+  description: "Evidence-based error tracking and study planning for medical students",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en">
+      <body className={inter.className}>
+        <nav className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+          <div className="max-w-6xl mx-auto px-4">
+            <div className="flex justify-between items-center h-16">
+              <Link href="/" className="text-xl font-bold text-gray-800 hover:text-blue-600 transition-colors">
+                E.A.T. Tracker
+              </Link>
+              <div className="flex gap-6">
+                <Link href="/log" className="text-gray-600 hover:text-blue-600 font-medium transition-colors">
+                  Log
+                </Link>
+                <Link href="/insights" className="text-gray-600 hover:text-blue-600 font-medium transition-colors">
+                  Insights
+                </Link>
+                <Link href="/plan" className="text-gray-600 hover:text-blue-600 font-medium transition-colors">
+                  Plan
+                </Link>
+              </div>
+            </div>
+          </div>
+        </nav>
+        {children}
+      </body>
+    </html>
+  );
+}
