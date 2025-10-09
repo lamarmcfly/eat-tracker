@@ -33,9 +33,6 @@ export default function RootLayout({
                 />
               </Link>
               <div className="flex gap-2 md:gap-4">
-                <Link href="/agent" className="text-gray-600 hover:text-blue-600 font-medium transition-colors text-xs md:text-base">
-                  🤖 Agent
-                </Link>
                 <Link href="/log" className="text-gray-600 hover:text-blue-600 font-medium transition-colors text-xs md:text-base">
                   Log
                 </Link>

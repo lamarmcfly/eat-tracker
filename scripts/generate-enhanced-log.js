@@ -1,4 +1,7 @@
-'use client';
+const fs = require('fs');
+const path = require('path');
+
+const enhancedLogContent = `'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -96,7 +99,7 @@ export default function QuickLog() {
           suggestions: [
             { field: 'system', value: data.system, confidence: 90, reason: 'Detected from medical keywords' },
             { field: 'topic', value: data.key_concept, confidence: 85, reason: 'Extracted key concept' },
-            { field: 'errorType', value: data.error_type, confidence: 80, reason: `${data.error_type} pattern detected` }
+            { field: 'errorType', value: data.error_type, confidence: 80, reason: \`$\{data.error_type} pattern detected\` }
           ]
         });
         setShowSuggestions(true);
@@ -224,7 +227,7 @@ export default function QuickLog() {
     e.preventDefault();
 
     const error: ErrorLog = {
-      id: `error-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: \`error-$\{Date.now()}-$\{Math.random().toString(36).substr(2, 9)}\`,
       timestamp: new Date(),
       description,
       system: system as ErrorLog['system'],
@@ -355,11 +358,11 @@ export default function QuickLog() {
                     <button
                       type="button"
                       onClick={isRecording ? stopVoiceRecording : startVoiceRecording}
-                      className={`p-2 rounded-lg transition-all ${
+                      className={\`p-2 rounded-lg transition-all $\{
                         isRecording
                           ? 'bg-red-500 text-white animate-pulse'
                           : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
-                      }`}
+                      }\`}
                       title={isRecording ? 'Stop recording' : 'Start voice input'}
                     >
                       {isRecording ? '⏹' : '🎤'}
@@ -482,7 +485,7 @@ export default function QuickLog() {
                     value={step}
                     onChange={(e) => updateNextStep(index, e.target.value)}
                     className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors"
-                    placeholder={`Action step ${index + 1}`}
+                    placeholder={\`Action step $\{index + 1}\`}
                   />
                   {nextSteps.length > 1 && (
                     <button
@@ -528,3 +531,12 @@ export default function QuickLog() {
     </div>
   );
 }
+`;
+
+const targetPath = path.join(__dirname, '..', 'app', 'log', 'page.tsx');
+fs.writeFileSync(targetPath, enhancedLogContent, 'utf8');
+
+console.log('✅ Enhanced log page created successfully!');
+console.log('📝 File:', targetPath);
+console.log('📏 Lines:', enhancedLogContent.split('\n').length);
+console.log('📦 Size:', (enhancedLogContent.length / 1024).toFixed(2), 'KB');
