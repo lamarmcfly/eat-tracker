@@ -1,0 +1,213 @@
+{
+  "agent_name": "EAT Agent",
+  "description": "Error Analysis & Targeted Learning assistant for medical students. Helps capture errors, explain priorities, and compose study plans.",
+  "structured_output": {
+    "format": "JSON",
+    "properties": {
+      "intent": {
+        "type": "enum",
+        "required": true,
+        "enum_values": ["log_error", "explain_priority", "compose_plan", "nudge", "other"],
+        "description": "What the user wants: log_error | explain_priority | compose_plan | nudge | other",
+        "example": "log_error"
+      },
+      "system": {
+        "type": "string",
+        "required": true,
+        "description": "NBME-style system/topic (e.g., Cardiovascular, Respiratory)",
+        "example": "Cardiovascular"
+      },
+      "error_type": {
+        "type": "enum",
+        "required": true,
+        "enum_values": ["knowledge", "reasoning", "process", "time"],
+        "description": "Primary error type",
+        "example": "knowledge"
+      },
+      "cognitive_bias": {
+        "type": "string",
+        "required": false,
+        "allow_null": true,
+        "description": "Optional bias (e.g., anchoring, availability) or null",
+        "example": "anchoring"
+      },
+      "key_concept": {
+        "type": "string",
+        "required": true,
+        "description": "The specific concept missed",
+        "example": "Preload vs stroke volume"
+      },
+      "confidence": {
+        "type": "integer",
+        "required": true,
+        "description": "Self-rated confidence 0-100",
+        "example": 40
+      },
+      "time_pressure": {
+        "type": "boolean",
+        "required": true,
+        "description": "Was the miss under time pressure?",
+        "example": true
+      },
+      "notes": {
+        "type": "string",
+        "required": false,
+        "description": "Short free-text note (optional)",
+        "example": ""
+      },
+      "corrective_action": {
+        "type": "string",
+        "required": true,
+        "description": "One concrete next step",
+        "example": "Review Frank-Starling curve"
+      }
+    },
+    "example_output": {
+      "intent": "log_error",
+      "system": "Cardiovascular",
+      "error_type": "knowledge",
+      "cognitive_bias": null,
+      "key_concept": "Preload vs stroke volume",
+      "confidence": 40,
+      "time_pressure": true,
+      "notes": "",
+      "corrective_action": "Review Frank-Starling curve"
+    }
+  },
+  "flow": {
+    "nodes": [
+      {
+        "id": "guardrails",
+        "type": "guardrails",
+        "next": "eat_agent"
+      },
+      {
+        "id": "eat_agent",
+        "type": "agent",
+        "output_format": "structured_json",
+        "tools": [],
+        "next": "main_splitter"
+      },
+      {
+        "id": "main_splitter",
+        "type": "if_else",
+        "condition": "$.intent == 'log_error'",
+        "if_true": "user_approval",
+        "if_false": "second_splitter"
+      },
+      {
+        "id": "user_approval",
+        "type": "approval",
+        "template": "System/Topic: {{system}}\nError Type: {{error_type}} {{#if cognitive_bias}}(+ {{cognitive_bias}}){{/if}}\nKey Concept: {{key_concept}}\nConfidence: {{confidence}}\nTime Pressure: {{time_pressure}}\nAction: {{corrective_action}}",
+        "on_approve": "transform_log",
+        "on_reject": "eat_agent",
+        "on_cancel": "end"
+      },
+      {
+        "id": "transform_log",
+        "type": "transform",
+        "template": {
+          "exam_source": "other",
+          "question_id": null,
+          "system": "{{system}}",
+          "error_type": "{{error_type}}",
+          "cognitive_bias": "{{cognitive_bias}}",
+          "key_concept": "{{key_concept}}",
+          "confidence": "{{confidence}}",
+          "time_pressure": "{{time_pressure}}",
+          "notes": "{{notes}}",
+          "corrective_action": "{{corrective_action}}"
+        },
+        "next": "mcp_post_errors"
+      },
+      {
+        "id": "mcp_post_errors",
+        "type": "mcp_http",
+        "method": "POST",
+        "server_url": "https://eat-tracker.vercel.app/api",
+        "path": "/errors",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{{transform_output}}",
+        "on_success": "end",
+        "on_error": "error_handler"
+      },
+      {
+        "id": "second_splitter",
+        "type": "if_else",
+        "condition": "$.intent == 'explain_priority'",
+        "if_true": "mcp_get_priority",
+        "if_false": "transform_plan"
+      },
+      {
+        "id": "mcp_get_priority",
+        "type": "mcp_http",
+        "method": "GET",
+        "server_url": "https://eat-tracker.vercel.app/api",
+        "path": "/priority",
+        "next": "agent_summarize_priority"
+      },
+      {
+        "id": "agent_summarize_priority",
+        "type": "agent",
+        "prompt": "Convert this priority JSON into a brief explanation of why these are the top priorities (focus on frequency + recency)",
+        "next": "end"
+      },
+      {
+        "id": "transform_plan",
+        "type": "transform",
+        "template": {
+          "deficits": [
+            {
+              "system": "{{system}}",
+              "concept": "{{key_concept}}",
+              "score": 75
+            }
+          ],
+          "days": 7
+        },
+        "next": "mcp_post_plan"
+      },
+      {
+        "id": "mcp_post_plan",
+        "type": "mcp_http",
+        "method": "POST",
+        "server_url": "https://eat-tracker.vercel.app/api",
+        "path": "/plan",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{{transform_output}}",
+        "next": "agent_summarize_plan"
+      },
+      {
+        "id": "agent_summarize_plan",
+        "type": "agent",
+        "prompt": "Summarize this study plan showing day-0, ~24-48h, and ~1-week revisits",
+        "next": "end"
+      },
+      {
+        "id": "error_handler",
+        "type": "agent",
+        "prompt": "Explain the error to the user and offer to retry",
+        "next": "end"
+      },
+      {
+        "id": "end",
+        "type": "end"
+      }
+    ]
+  },
+  "test_prompts": {
+    "log_error": "Missed preload vs stroke volume; confidence 40; rushed.",
+    "explain_priority": "Explain my top priorities.",
+    "compose_plan": "Build me a 7-day micro-plan from my top issues."
+  },
+  "troubleshooting": {
+    "needs_property_error": "Add at least one property under Structured JSON output. Start with 'intent' and mark it Required.",
+    "if_else_cant_see_fields": "Use the output/variable picker rather than typing. May need $.output.intent instead of $.intent",
+    "405_on_plan": "Use POST method, not GET. Your MCP node should be configured for POST.",
+    "network_errors": "Confirm Server URL is https://eat-tracker.vercel.app/api (not localhost)"
+  }
+}
