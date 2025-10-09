@@ -22,9 +22,7 @@ export default function RootLayout({
         <nav className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
           <div className="max-w-6xl mx-auto px-4">
             <div className="flex justify-between items-center h-16">
-              <Link href="/" className="text-xl font-bold text-gray-800 hover:text-blue-600 transition-colors">
-                E.A.T. Tracker
-              </Link>
+              <Link href="/" className="text-lg text-gray-600 hover:text-blue-600 transition-colors font-medium">Home</Link>
               <div className="flex gap-2 md:gap-4">
                 <Link href="/log" className="text-gray-600 hover:text-blue-600 font-medium transition-colors text-xs md:text-base">
                   Log
