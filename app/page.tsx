@@ -20,6 +20,20 @@ export default function Home() {
       {/* Hero Section */}
       <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 md:p-8">
         <div className="max-w-6xl mx-auto">
+          <div className="flex items-center gap-6 mb-6">
+            <Image
+              src="/eat-logo.png"
+              alt="E.A.T. Tracker Logo"
+              width={150}
+              height={150}
+              className="w-24 h-24 md:w-32 md:h-32"
+              priority
+            />
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold">E.A.T. Tracker</h1>
+              <p className="text-blue-100 text-sm md:text-base">Error Analysis & Targeted Learning</p>
+            </div>
+          </div>
           
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
