@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { storage } from '@/lib/storage';
 import { ErrorLog } from '@/lib/types';
 
@@ -17,19 +18,31 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
       {/* Hero Section */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-8 md:p-12">
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 md:p-8">
         <div className="max-w-6xl mx-auto">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">E.A.T. Tracker</h1>
-          <p className="text-xl text-blue-100 mb-8">Error Analysis & Targeted Learning for Medical Students</p>
+          
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Link
               href="/log"
-              className="bg-white text-blue-600 rounded-xl p-6 hover:shadow-2xl transition-all transform hover:scale-105"
+              className="bg-white text-blue-600 rounded-xl p-6 hover:shadow-2xl transition-all transform hover:scale-105 relative"
             >
-              <div className="text-3xl mb-2">📝</div>
-              <h2 className="text-xl font-bold mb-1">Quick Log</h2>
-              <p className="text-sm text-gray-600">Capture errors in seconds</p>
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="text-3xl mb-2">📝</div>
+                  <h2 className="text-xl font-bold mb-1">Quick Log</h2>
+                  <p className="text-sm text-gray-600">Capture errors in seconds</p>
+                </div>
+                <div className="ml-4">
+                  <Image
+                    src="/eat-logo.png"
+                    alt="E.A.T. Logo"
+                    width={80}
+                    height={80}
+                    className="w-20 h-20 object-contain"
+                  />
+                </div>
+              </div>
             </Link>
 
             <Link

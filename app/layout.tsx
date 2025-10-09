@@ -22,15 +22,8 @@ export default function RootLayout({
         <nav className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
           <div className="max-w-6xl mx-auto px-4">
             <div className="flex justify-between items-center h-16">
-              <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                <Image
-                  src="/eat-logo.png"
-                  alt="E.A.T. Tracker Logo"
-                  width={120}
-                  height={40}
-                  className="h-10 w-auto"
-                  priority
-                />
+              <Link href="/" className="text-xl font-bold text-gray-800 hover:text-blue-600 transition-colors">
+                E.A.T. Tracker
               </Link>
               <div className="flex gap-2 md:gap-4">
                 <Link href="/log" className="text-gray-600 hover:text-blue-600 font-medium transition-colors text-xs md:text-base">
