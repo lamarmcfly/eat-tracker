@@ -96,6 +96,22 @@ export interface ExternalQuestionMetadata {
 
   // Raw metadata for future use
   rawMetadata?: Record<string, unknown>; // Preserve original data
+
+  // Spaced repetition timing (UWorld/AMBOSS show next review date)
+  nextQBankReview?: Date;        // When Q-bank will show this again (from Q-bank's algorithm)
+}
+
+/**
+ * Spaced Repetition Review Scheduling
+ * Strategically schedules reviews BEFORE seeing question again in Q-bank
+ * to maximize retention when it matters most
+ */
+export interface SpacedReview {
+  errorId: string;               // Reference to the original error
+  lastSeenInQBank: Date;         // When you encountered this Q-bank question
+  nextQBankReview?: Date;        // When Q-bank will show it again (if provided)
+  targetReviewDate: Date;        // Strategic review date (1-2 days BEFORE next Q-bank review)
+  reviewReason: string;          // Plain-language explanation (e.g., "Review before UWorld shows it again")
 }
 
 export interface TopicPattern {

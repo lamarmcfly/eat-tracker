@@ -1,6 +1,7 @@
 // Evidence-based spaced-repetition scheduler
 import { TopicPattern, StudyBlock, StudyPlan, ErrorLog, UrgencyLevel, ErrorType, ActivityType, ErrorTypeStrategy } from './types';
 import { PriorityScore, calculateAllPriorities } from './priority';
+import { generateSpacedReviews, groupReviewsByDate } from './spacedRepetition';
 
 interface ScheduleInterval {
   day: number;
@@ -133,12 +134,14 @@ function getErrorTypeStrategy(errorTypes: Record<ErrorType, number>): {
 
 /**
  * Create study blocks for a single topic based on priority
+ * Enhanced with Q-Bank review timing when available
  */
 function createBlocksForTopic(
   priority: PriorityScore,
   pattern: TopicPattern,
   weekStart: Date,
-  blockIdOffset: number
+  blockIdOffset: number,
+  allErrors: ErrorLog[]
 ): StudyBlock[] {
   // Get base intervals for urgency level
   let intervals = getIntervalsForUrgency(priority.urgency);
@@ -147,10 +150,48 @@ function createBlocksForTopic(
   const { strategy, dominantType, proportion } = getErrorTypeStrategy(pattern.errorTypes);
   intervals = adjustIntervalsForErrorType(intervals, dominantType, proportion);
 
+  // Check if any errors for this topic have Q-Bank next review dates
+  const topicErrors = allErrors.filter(
+    e => e.system === pattern.system && e.topic === pattern.topic
+  );
+
+  const qbankReviewDates = topicErrors
+    .map(e => e.externalQuestion?.nextQBankReview)
+    .filter((d): d is Date => d !== undefined)
+    .map(d => new Date(d));
+
   // Create blocks
   return intervals.map((interval, index) => {
     const scheduledDate = new Date(weekStart);
     scheduledDate.setDate(scheduledDate.getDate() + interval.day - 1);
+
+    let reasoning = interval.reasoning;
+    let qbankTiming = '';
+
+    // If Q-Bank review exists, adjust reasoning to highlight strategic timing
+    if (qbankReviewDates.length > 0) {
+      const closestQBankReview = qbankReviewDates.reduce((closest, current) => {
+        const diffCurrent = Math.abs(current.getTime() - scheduledDate.getTime());
+        const diffClosest = Math.abs(closest.getTime() - scheduledDate.getTime());
+        return diffCurrent < diffClosest ? current : closest;
+      });
+
+      const daysUntilQBank = Math.floor(
+        (closestQBankReview.getTime() - scheduledDate.getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      // If this review is 1-2 days before Q-Bank, highlight it
+      if (daysUntilQBank > 0 && daysUntilQBank <= 2) {
+        qbankTiming = ` • Q-Bank review in ${daysUntilQBank}d`;
+        reasoning = `Strategic: Review ${daysUntilQBank}d before Q-Bank shows it again`;
+      } else if (daysUntilQBank === 0) {
+        qbankTiming = ' • Q-Bank review TODAY';
+        reasoning = 'URGENT: Q-Bank shows this question today - review now!';
+      } else if (daysUntilQBank < 0 && daysUntilQBank >= -1) {
+        qbankTiming = ' • Just saw in Q-Bank';
+        reasoning = 'Post-Q-Bank reinforcement - consolidate while fresh';
+      }
+    }
 
     return {
       id: `block-${blockIdOffset + index}`,
@@ -161,7 +202,7 @@ function createBlocksForTopic(
       activity: interval.activity,
       duration: interval.duration,
       priority: priority.rank,
-      reasoning: interval.reasoning,
+      reasoning: reasoning + qbankTiming,
 
       // Enhanced fields
       urgency: priority.urgency,
@@ -211,7 +252,7 @@ export function generateEnhancedStudyPlan(
 
     if (!pattern) return;
 
-    const blocks = createBlocksForTopic(priority, pattern, weekStart, blockIdOffset);
+    const blocks = createBlocksForTopic(priority, pattern, weekStart, blockIdOffset, allErrors);
     allBlocks.push(...blocks);
     blockIdOffset += blocks.length;
   });

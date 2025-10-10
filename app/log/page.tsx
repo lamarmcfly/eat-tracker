@@ -23,6 +23,7 @@ export default function QuickLog() {
   const [questionBank, setQuestionBank] = useState<QuestionBank | ''>('');
   const [questionId, setQuestionId] = useState('');
   const [percentCorrect, setPercentCorrect] = useState<number | ''>('');
+  const [nextQBankReview, setNextQBankReview] = useState<string>(''); // Date input format: YYYY-MM-DD
 
   const [isRecording, setIsRecording] = useState(false);
   const [voiceSupported, setVoiceSupported] = useState(false);
@@ -157,10 +158,11 @@ export default function QuickLog() {
       confidence,
       cognitiveLevel: cognitiveLevel || undefined,
       nextSteps: nextSteps.filter(s => s.trim()),
-      externalQuestion: (questionBank || questionId || percentCorrect) ? {
+      externalQuestion: (questionBank || questionId || percentCorrect || nextQBankReview) ? {
         questionId: questionId || 'unknown',
         questionBank: (questionBank as QuestionBank) || 'other',
         percentCorrect: typeof percentCorrect === 'number' ? percentCorrect : undefined,
+        nextQBankReview: nextQBankReview ? new Date(nextQBankReview) : undefined,
       } : undefined,
     };
 
@@ -304,7 +306,7 @@ export default function QuickLog() {
               <h3 className="font-semibold text-purple-900 mb-3">📚 Question Bank Info (Optional)</h3>
               <p className="text-xs text-purple-700 mb-4">Track which questions you miss for better insights</p>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Q-Bank Source
@@ -336,7 +338,9 @@ export default function QuickLog() {
                     placeholder="e.g., UW-1234"
                   />
                 </div>
+              </div>
 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     National % Correct
@@ -351,10 +355,28 @@ export default function QuickLog() {
                     placeholder="e.g., 65"
                   />
                 </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Next Q-Bank Review
+                    <span className="ml-2 text-xs text-purple-600">🎯 For spaced repetition</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={nextQBankReview}
+                    onChange={(e) => setNextQBankReview(e.target.value)}
+                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none"
+                    min={new Date().toISOString().split('T')[0]}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">When Q-bank will show this again</p>
+                </div>
               </div>
 
               <p className="text-xs text-gray-500 mt-3">
                 💡 Tracking Q-bank data helps identify if you're below national average on specific topics
+              </p>
+              <p className="text-xs text-purple-600 mt-1 font-medium">
+                🎯 Spaced repetition: We'll schedule your review 1-2 days BEFORE the Q-Bank shows it again!
               </p>
             </div>
 
