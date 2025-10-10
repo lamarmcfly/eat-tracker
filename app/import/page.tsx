@@ -12,14 +12,77 @@ import {
   ImportValidationResult,
 } from '@/lib/qbankImport';
 import { ErrorLog } from '@/lib/types';
+import {
+  generateCSVTemplate,
+  exportErrorsToCSV,
+  parseCSVToErrors,
+  downloadCSV,
+} from '@/lib/csvTemplate';
 
 export default function ImportPage() {
   const router = useRouter();
   const [jsonInput, setJsonInput] = useState('');
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [uploadMode, setUploadMode] = useState<'json' | 'csv'>('csv');
   const [validationResults, setValidationResults] = useState<ImportValidationResult[]>([]);
+  const [csvWarnings, setCsvWarnings] = useState<string[]>([]);
   const [previewData, setPreviewData] = useState<Partial<ErrorLog>[]>([]);
   const [importMode, setImportMode] = useState<'single' | 'batch'>('single');
   const [showHelp, setShowHelp] = useState(false);
+
+  const handleDownloadTemplate = () => {
+    const template = generateCSVTemplate();
+    const today = new Date().toISOString().split('T')[0];
+    downloadCSV(template, `EAT-Tracker-Template-${today}.csv`);
+  };
+
+  const handleDownloadExisting = () => {
+    const errors = storage.getErrors();
+    if (errors.length === 0) {
+      alert('No errors to export. Log some errors first!');
+      return;
+    }
+    const csv = exportErrorsToCSV(errors);
+    const today = new Date().toISOString().split('T')[0];
+    downloadCSV(csv, `EAT-Tracker-Export-${today}.csv`);
+  };
+
+  const handleCSVUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setCsvFile(file);
+
+    const text = await file.text();
+    try {
+      const { errors, warnings } = parseCSVToErrors(text);
+
+      if (errors.length === 0) {
+        setValidationResults([{
+          valid: false,
+          errors: ['No valid errors found in CSV file'],
+          warnings,
+        }]);
+        setCsvWarnings(warnings);
+        setPreviewData([]);
+        return;
+      }
+
+      // Convert to preview format
+      setPreviewData(errors);
+      setImportMode('batch');
+      setValidationResults(errors.map(() => ({ valid: true, errors: [], warnings: [] })));
+      setCsvWarnings(warnings);
+    } catch (error) {
+      setValidationResults([{
+        valid: false,
+        errors: [error instanceof Error ? error.message : 'Failed to parse CSV'],
+        warnings: [],
+      }]);
+      setCsvWarnings([]);
+      setPreviewData([]);
+    }
+  };
 
   const handleValidate = () => {
     try {
@@ -74,6 +137,7 @@ export default function ImportPage() {
         confidence: item.confidence ? migrateConfidence(item.confidence) : 1,
         cognitiveLevel: item.cognitiveLevel,
         nextSteps: item.nextSteps || [],
+        tags: item.tags,
         externalQuestion: item.externalQuestion,
       };
 
@@ -82,7 +146,9 @@ export default function ImportPage() {
 
     // Reset form
     setJsonInput('');
+    setCsvFile(null);
     setValidationResults([]);
+    setCsvWarnings([]);
     setPreviewData([]);
 
     // Navigate to insights
@@ -91,29 +157,131 @@ export default function ImportPage() {
 
   const validCount = validationResults.filter(r => r.valid).length;
   const invalidCount = validationResults.length - validCount;
-  const hasWarnings = validationResults.some(r => r.warnings.length > 0);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
       <div className="max-w-5xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-gray-800">Import Q-Bank Data</h1>
+          <h1 className="text-3xl font-bold text-gray-800">Import Errors</h1>
           <button
             onClick={() => setShowHelp(!showHelp)}
             className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
-            {showHelp ? 'Hide' : 'Show'} Examples
+            {showHelp ? 'Hide' : 'Show'} Help
           </button>
         </div>
 
-        {showHelp && (
-          <div className="bg-white rounded-xl shadow-lg p-6 space-y-4">
-            <h2 className="text-xl font-bold text-gray-800">Import Format Examples</h2>
+        {/* Quick Start Guide */}
+        <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-6 border border-green-200">
+          <h2 className="text-xl font-bold text-gray-800 mb-3">📊 Excel/CSV Import - Easy Offline Tracking</h2>
+          <p className="text-sm text-gray-700 mb-4">
+            Track your errors in Excel when you&apos;re away from the app, then bulk upload later!
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={handleDownloadTemplate}
+              className="px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors shadow-md"
+            >
+              📥 Download Excel Template
+            </button>
+            <button
+              onClick={handleDownloadExisting}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-md"
+            >
+              📤 Export Current Errors
+            </button>
+          </div>
+          <p className="text-xs text-gray-600 mt-3">
+            💡 <strong>Tip:</strong> Download the template, fill it in Excel offline, then upload below. Includes example row!
+          </p>
+        </div>
 
-            <div className="space-y-4">
-              <div>
-                <h3 className="font-semibold text-gray-700 mb-2">Single Question (Minimal)</h3>
-                <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto">
+        {/* Upload Mode Selector */}
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <h2 className="text-xl font-bold text-gray-800 mb-4">Choose Import Method</h2>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setUploadMode('csv')}
+              className={`flex-1 px-6 py-4 rounded-lg font-medium transition-colors border-2 ${
+                uploadMode === 'csv'
+                  ? 'bg-blue-50 border-blue-500 text-blue-700'
+                  : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <div className="text-2xl mb-1">📊</div>
+              <div className="font-bold">Excel/CSV Upload</div>
+              <div className="text-xs mt-1">Easy for medical students</div>
+            </button>
+            <button
+              onClick={() => setUploadMode('json')}
+              className={`flex-1 px-6 py-4 rounded-lg font-medium transition-colors border-2 ${
+                uploadMode === 'json'
+                  ? 'bg-blue-50 border-blue-500 text-blue-700'
+                  : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <div className="text-2xl mb-1">🔧</div>
+              <div className="font-bold">JSON Import</div>
+              <div className="text-xs mt-1">For Q-Bank integrations</div>
+            </button>
+          </div>
+        </div>
+
+        {/* CSV Upload Section */}
+        {uploadMode === 'csv' && (
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">Upload Excel/CSV File</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Fill out the downloaded template in Excel, then upload it here. Works with Excel exports and CSV files.
+            </p>
+
+            <label className="block">
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition-colors cursor-pointer">
+                <input
+                  type="file"
+                  accept=".csv,.xlsx,.xls"
+                  onChange={handleCSVUpload}
+                  className="hidden"
+                />
+                <div className="text-4xl mb-2">📁</div>
+                <div className="font-medium text-gray-700">
+                  {csvFile ? csvFile.name : 'Click to upload or drag CSV file'}
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  Supports .csv, .xlsx (Excel will auto-convert to CSV on save)
+                </div>
+              </div>
+            </label>
+
+            {csvFile && (
+              <div className="mt-4 flex gap-3">
+                <button
+                  onClick={() => {
+                    setCsvFile(null);
+                    setValidationResults([]);
+                    setCsvWarnings([]);
+                    setPreviewData([]);
+                  }}
+                  className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+                >
+                  Clear File
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* JSON Input Section */}
+        {uploadMode === 'json' && (
+          <>
+            {showHelp && (
+              <div className="bg-white rounded-xl shadow-lg p-6 space-y-4">
+                <h2 className="text-xl font-bold text-gray-800">JSON Import Format Examples</h2>
+
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="font-semibold text-gray-700 mb-2">Single Question (Minimal)</h3>
+                    <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto">
 {`{
   "questionId": "uw-12345",
   "questionBank": "uworld",
@@ -122,36 +290,12 @@ export default function ImportPage() {
   "difficulty": "medium",
   "percentCorrect": 65
 }`}
-                </pre>
-              </div>
+                    </pre>
+                  </div>
 
-              <div>
-                <h3 className="font-semibold text-gray-700 mb-2">Full Metadata (UWorld/Amboss)</h3>
-                <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto">
-{`{
-  "questionId": "amb-789",
-  "questionBank": "amboss",
-  "description": "Got ACS management wrong",
-  "system": "Cardiovascular",
-  "topic": "STEMI",
-  "difficulty": 3,
-  "percentCorrect": 58,
-  "learningObjectives": [
-    "Recognize clinical presentation of STEMI",
-    "Understand indications for fibrinolytic therapy"
-  ],
-  "tags": ["High-Yield", "Step 2"],
-  "bloomsLevel": "Apply",
-  "estimatedTime": 90,
-  "errorType": "reasoning",
-  "confidence": "eliminated"
-}`}
-                </pre>
-              </div>
-
-              <div>
-                <h3 className="font-semibold text-gray-700 mb-2">Batch Import (Array)</h3>
-                <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto">
+                  <div>
+                    <h3 className="font-semibold text-gray-700 mb-2">Batch Import (Array)</h3>
+                    <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto">
 {`[
   {
     "questionId": "uw-100",
@@ -168,57 +312,73 @@ export default function ImportPage() {
     "difficulty": 4
   }
 ]`}
-                </pre>
-              </div>
-            </div>
+                    </pre>
+                  </div>
+                </div>
 
-            <div className="border-t pt-4">
-              <h3 className="font-semibold text-gray-700 mb-2">Supported Q-Banks</h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
-                <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded">UWorld</span>
-                <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded">Amboss</span>
-                <span className="px-3 py-1 bg-green-100 text-green-800 rounded">NBME</span>
-                <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded">Kaplan</span>
-                <span className="px-3 py-1 bg-red-100 text-red-800 rounded">USMLE-Rx</span>
-                <span className="px-3 py-1 bg-gray-100 text-gray-800 rounded">Other</span>
+                <div className="border-t pt-4">
+                  <h3 className="font-semibold text-gray-700 mb-2">Supported Q-Banks</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+                    <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded">UWorld</span>
+                    <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded">Amboss</span>
+                    <span className="px-3 py-1 bg-green-100 text-green-800 rounded">NBME</span>
+                    <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded">Kaplan</span>
+                    <span className="px-3 py-1 bg-red-100 text-red-800 rounded">USMLE-Rx</span>
+                    <span className="px-3 py-1 bg-gray-100 text-gray-800 rounded">Other</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <h2 className="text-xl font-bold text-gray-800 mb-4">Paste JSON Data</h2>
+              <textarea
+                value={jsonInput}
+                onChange={(e) => setJsonInput(e.target.value)}
+                className="w-full h-64 px-4 py-3 border border-gray-300 rounded-lg font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder='Paste your Q-bank JSON here...\n\nExample:\n{\n  "questionId": "uw-12345",\n  "questionBank": "uworld",\n  "system": "Cardiovascular",\n  "topic": "Acute MI",\n  "difficulty": 3,\n  "percentCorrect": 65\n}'
+              />
+
+              <div className="flex gap-3 mt-4">
+                <button
+                  onClick={handleValidate}
+                  disabled={!jsonInput.trim()}
+                  className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                >
+                  Validate & Preview
+                </button>
+                <button
+                  onClick={() => {
+                    setJsonInput('');
+                    setValidationResults([]);
+                    setPreviewData([]);
+                  }}
+                  className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+                >
+                  Clear
+                </button>
               </div>
             </div>
+          </>
+        )}
+
+        {/* CSV Warnings */}
+        {csvWarnings.length > 0 && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <h3 className="font-semibold text-yellow-800 mb-2">⚠️ Import Warnings ({csvWarnings.length})</h3>
+            <ul className="text-sm text-yellow-700 list-disc list-inside space-y-1">
+              {csvWarnings.map((warning, i) => (
+                <li key={i}>{warning}</li>
+              ))}
+            </ul>
+            <p className="text-xs text-yellow-600 mt-2">
+              These rows were skipped but the rest will import successfully.
+            </p>
           </div>
         )}
 
-        {/* Input Section */}
-        <div className="bg-white rounded-xl shadow-lg p-6">
-          <h2 className="text-xl font-bold text-gray-800 mb-4">Paste JSON Data</h2>
-          <textarea
-            value={jsonInput}
-            onChange={(e) => setJsonInput(e.target.value)}
-            className="w-full h-64 px-4 py-3 border border-gray-300 rounded-lg font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder='Paste your Q-bank JSON here...\n\nExample:\n{\n  "questionId": "uw-12345",\n  "questionBank": "uworld",\n  "system": "Cardiovascular",\n  "topic": "Acute MI",\n  "difficulty": 3,\n  "percentCorrect": 65\n}'
-          />
-
-          <div className="flex gap-3 mt-4">
-            <button
-              onClick={handleValidate}
-              disabled={!jsonInput.trim()}
-              className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-            >
-              Validate & Preview
-            </button>
-            <button
-              onClick={() => {
-                setJsonInput('');
-                setValidationResults([]);
-                setPreviewData([]);
-              }}
-              className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
-            >
-              Clear
-            </button>
-          </div>
-        </div>
-
         {/* Validation Results */}
-        {validationResults.length > 0 && (
+        {validationResults.length > 0 && uploadMode === 'json' && (
           <div className="bg-white rounded-xl shadow-lg p-6">
             <h2 className="text-xl font-bold text-gray-800 mb-4">Validation Results</h2>
 
@@ -277,78 +437,74 @@ export default function ImportPage() {
                 ))}
               </div>
             )}
+          </div>
+        )}
 
-            {/* Preview */}
-            {previewData.length > 0 && (
-              <>
-                <h3 className="font-bold text-gray-800 mb-3">Import Preview</h3>
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {previewData.map((item, idx) => (
-                    <div key={idx} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                      <div className="grid grid-cols-2 gap-3 text-sm">
-                        <div>
-                          <span className="text-gray-600 font-medium">System:</span>{' '}
-                          <span className="text-gray-800">{item.system}</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-600 font-medium">Topic:</span>{' '}
-                          <span className="text-gray-800">{item.topic}</span>
-                        </div>
-                        {item.externalQuestion && (
-                          <>
-                            <div>
-                              <span className="text-gray-600 font-medium">Q-Bank:</span>{' '}
-                              <span className="text-gray-800 uppercase">{item.externalQuestion.questionBank}</span>
-                            </div>
-                            <div>
-                              <span className="text-gray-600 font-medium">Question ID:</span>{' '}
-                              <span className="text-gray-800">{item.externalQuestion.questionId}</span>
-                            </div>
-                            {item.externalQuestion.difficulty && (
-                              <div>
-                                <span className="text-gray-600 font-medium">Difficulty:</span>{' '}
-                                <span className="text-gray-800">{item.externalQuestion.difficulty}/5</span>
-                              </div>
-                            )}
-                            {item.externalQuestion.percentCorrect && (
-                              <div>
-                                <span className="text-gray-600 font-medium">% Correct:</span>{' '}
-                                <span className="text-gray-800">{item.externalQuestion.percentCorrect}%</span>
-                              </div>
-                            )}
-                          </>
-                        )}
-                      </div>
-                      {item.externalQuestion?.learningObjectives && item.externalQuestion.learningObjectives.length > 0 && (
-                        <div className="mt-3 pt-3 border-t border-gray-300">
-                          <div className="text-xs text-gray-600 font-medium mb-1">Learning Objectives:</div>
-                          <ul className="text-sm text-gray-700 list-disc list-inside">
-                            {item.externalQuestion.learningObjectives.map((obj, i) => (
-                              <li key={i}>{obj}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
+        {/* Preview */}
+        {previewData.length > 0 && (
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <h3 className="font-bold text-gray-800 mb-3">Import Preview ({previewData.length} errors)</h3>
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {previewData.slice(0, 10).map((item, idx) => (
+                <div key={idx} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <span className="text-gray-600 font-medium">System:</span>{' '}
+                      <span className="text-gray-800">{item.system}</span>
                     </div>
-                  ))}
+                    <div>
+                      <span className="text-gray-600 font-medium">Topic:</span>{' '}
+                      <span className="text-gray-800">{item.topic}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600 font-medium">Error Type:</span>{' '}
+                      <span className="text-gray-800 capitalize">{item.errorType}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600 font-medium">Confidence:</span>{' '}
+                      <span className="text-gray-800">{item.confidence}/4</span>
+                    </div>
+                    {item.externalQuestion && (
+                      <>
+                        <div>
+                          <span className="text-gray-600 font-medium">Q-Bank:</span>{' '}
+                          <span className="text-gray-800 uppercase">{item.externalQuestion.questionBank}</span>
+                        </div>
+                        {item.externalQuestion.percentCorrect && (
+                          <div>
+                            <span className="text-gray-600 font-medium">% Correct:</span>{' '}
+                            <span className="text-gray-800">{item.externalQuestion.percentCorrect}%</span>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                  {item.description && (
+                    <p className="text-sm text-gray-700 mt-2">{item.description}</p>
+                  )}
                 </div>
+              ))}
+              {previewData.length > 10 && (
+                <p className="text-sm text-gray-500 text-center py-2">
+                  + {previewData.length - 10} more errors (showing first 10)
+                </p>
+              )}
+            </div>
 
-                <div className="flex gap-3 mt-6">
-                  <button
-                    onClick={handleImport}
-                    className="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
-                  >
-                    Confirm & Import {previewData.length} {previewData.length === 1 ? 'Question' : 'Questions'}
-                  </button>
-                  <button
-                    onClick={() => router.push('/insights')}
-                    className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </>
-            )}
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={handleImport}
+                className="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
+              >
+                ✅ Confirm & Import {previewData.length} {previewData.length === 1 ? 'Error' : 'Errors'}
+              </button>
+              <button
+                onClick={() => router.push('/insights')}
+                className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         )}
       </div>
