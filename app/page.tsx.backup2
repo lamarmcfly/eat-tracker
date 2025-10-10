@@ -22,12 +22,8 @@ export default function Home() {
     const hour = new Date().getHours();
     if (hour < 12) setGreeting('Good morning');
     else if (hour < 18) setGreeting('Good afternoon');
+    // Show onboarding for first-time users    if (!onboardingStorage.hasCompletedOnboarding()) {      setShowOnboarding(true);    }
     else setGreeting('Good evening');
-
-    // Show onboarding for first-time users
-    if (!onboardingStorage.hasCompletedOnboarding()) {
-      setShowOnboarding(true);
-    }
   }, []);
 
   const recentErrors = errors.slice(-3).reverse();
@@ -242,17 +238,9 @@ export default function Home() {
               </div>
             </div>
           </>
+      {/* Onboarding Modal */}      <OnboardingModal        isOpen={showOnboarding}        onClose={() => {          setShowOnboarding(false);          onboardingStorage.markCompleted();        }}      />
         )}
       </div>
-
-      {/* Onboarding Modal */}
-      <OnboardingModal
-        isOpen={showOnboarding}
-        onClose={() => {
-          setShowOnboarding(false);
-          onboardingStorage.markCompleted();
-        }}
-      />
     </div>
   );
 }
