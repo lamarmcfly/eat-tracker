@@ -198,6 +198,9 @@ export interface PracticeTest {
 
   // NBME Prediction (if applicable)
   predictedScore?: number;       // Predicted Step/Shelf score
+  // For shelf FINAL exams - actual grade received
+  shelfGrade?: 'honors' | 'high-pass' | 'pass' | 'fail';
+  shelfPercentile?: number;      // National percentile on shelf final
 
   // System breakdown (optional)
   systemBreakdown?: Array<{
@@ -232,4 +235,39 @@ export interface ExamReadiness {
   // Supporting data
   totalTests: number;
   testHistory: PracticeTest[];
+}
+
+// Student Goal Settings
+export interface StudentGoals {
+  // Step exam goals
+  step1Target?: number;          // Target score (e.g., 240)
+  step2ckTarget?: number;        // Target score (e.g., 250)
+  step3Target?: number;          // Target score (e.g., 230)
+  
+  // Shelf exam goals (percentile or honor threshold)
+  shelfTarget?: number;          // Target percentile (e.g., 70 for Honors)
+  shelfHonorsThreshold?: number; // School-specific honors cutoff
+  
+  // Exam dates
+  step1Date?: Date;
+  step2ckDate?: Date;
+  step3Date?: Date;
+  
+  // Current year/phase
+  medSchoolYear?: 'MS1' | 'MS2' | 'MS3' | 'MS4';
+}
+
+// Shelf Exam to Step 2 CK Correlation
+export interface ShelfToStep2Correlation {
+  averageShelfPercentile: number;      // Average across all shelf exams
+  predictedStep2Score?: number;        // Predicted Step 2 CK score based on shelf performance
+  shelfExamsTaken: number;             // Number of shelf exams completed
+  honorsCount: number;                 // Number of honors grades
+  highPassCount: number;               // Number of high pass grades
+  passCount: number;                   // Number of pass grades
+  
+  // Readiness indicator
+  isReadyForStep2: boolean;
+  step2Confidence: 'high' | 'moderate' | 'low' | 'not-ready';
+  recommendations: string[];
 }

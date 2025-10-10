@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { PracticeTest, ExamTarget, PracticeTestType, ExamReadiness } from '@/lib/types';
 import { practiceTestStorage } from '@/lib/practiceTestStorage';
 import { calculateExamReadiness, getExamTargetName, getConfidenceColor } from '@/lib/examReadiness';
+import { calculateShelfToStep2Correlation, getShelfExamName, getPerformanceTier } from '@/lib/shelfToStep2';
 
 export default function ReadinessPage() {
   const router = useRouter();
