@@ -311,7 +311,7 @@ export default function ReadinessPage() {
         <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-6">
           <h3 className="font-bold text-blue-900 mb-3 text-lg">📊 Research-Backed Readiness Criteria</h3>
           <div className="text-sm text-blue-800 whitespace-pre-line">
-            {getReadinessExplanation(readiness?.latestNBMEPrediction !== undefined)}
+            {getReadinessExplanation(examTarget, readiness?.latestNBMEPrediction !== undefined)}
           </div>
         </div>
       </div>

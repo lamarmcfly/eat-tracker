@@ -1,139 +1,131 @@
 // Research-Backed Exam Readiness Criteria
-// Sources and evidence for readiness indicators
+// Exam-specific criteria for Step 1, Step 2 CK, Step 3, and Shelf exams
 
 /**
- * NBME Self-Assessment Prediction Accuracy
- *
- * Research: Cuddy MM, Swygert KA, Swanson DB, Jurd DW. A multilevel analysis of the relationships
- * between examinee gender and United States Medical Licensing Examination (USMLE) Step 2
- * Clinical Knowledge (CK) content area performance. Acad Med. 2011;86(10 Suppl):S90-4.
- *
- * Finding: NBME self-assessments predict actual USMLE scores within ±10-15 points
- *
- * Clinical Significance:
- * - NBME SAs are the gold standard for predicting actual exam performance
- * - Multiple assessments showing consistent scores = reliable prediction
- * - Single assessment has wider confidence interval
+ * Get exam-specific readiness explanation text for UI
  */
+export function getReadinessExplanation(
+  examType: 'step1' | 'step2ck' | 'step3' | 'shelf',
+  hasGoalScore: boolean
+): string {
+  // Step 1 - Pass/Fail (post-2022)
+  if (examType === 'step1') {
+    return `**Step 1 Readiness Criteria (Pass/Fail Format):**
 
-/**
- * Practice Test Performance Thresholds
- *
- * Evidence-Based Thresholds:
- * - 65%+ on practice tests generally indicates passing-level performance
- * - For Step 1: 60-65% correct historically corresponded to ~190-200 score
- * - For Step 2 CK: Similar correlation exists between % correct and 3-digit score
- *
- * Important Notes:
- * - Post-2022 Step 1 is Pass/Fail - thresholds still relevant for Step 2 CK/Step 3
- * - Individual NBME forms may have different difficulty calibrations
- * - Raw percentage should be interpreted with NBME's predicted 3-digit score
- */
-
-/**
- * Readiness Indicators - Research-Backed Criteria
- *
- * 1. CONSECUTIVE PERFORMANCE AT/ABOVE GOAL
- *    - 2+ practice tests showing consistent performance at target level
- *    - Reduces impact of single test variability
- *    - Indicates stable mastery, not lucky day
- *
- * 2. UPWARD TREND TOWARD GOAL
- *    - Improving scores across sequential practice tests
- *    - Indicates effective studying and continued learning
- *    - Even if not yet at goal, trend suggests readiness approaching
- *
- * 3. NBME PREDICTIONS WITHIN RANGE OF GOAL
- *    - NBME predicted score ≥ (goal - 10 points)
- *    - Accounts for ±10-15 point prediction confidence interval
- *    - Example: Goal 240, predictions showing 230+ = within range
- *
- * 4. ADEQUATE NUMBER OF ASSESSMENTS
- *    - Minimum 4-6 practice tests during dedicated study
- *    - Optimal spacing: 1-2 weeks apart
- *    - More assessments = more reliable readiness determination
- */
-
-export interface ReadinessCriteriaExplanation {
-  criterion: string;
-  description: string;
-  evidence: string;
-  application: string;
-}
-
-export const READINESS_CRITERIA: ReadinessCriteriaExplanation[] = [
-  {
-    criterion: '2+ Consecutive Tests At Goal',
-    description: 'Two or more consecutive practice test scores at or above your target score',
-    evidence: 'Reduces single-test variability. Consistent performance indicates stable mastery.',
-    application: 'If your goal is 240 and your NBME predictions show 235, 242, 238 - you\'ve demonstrated readiness',
-  },
-  {
-    criterion: 'Improving Trend Toward Goal',
-    description: 'Scores trending upward across sequential practice tests',
-    evidence: 'Upward trajectory indicates effective studying and continued learning',
-    application: 'Even if not at goal yet, improvement from 220 → 230 → 235 suggests readiness approaching',
-  },
-  {
-    criterion: 'NBME Predictions ±10 Points of Goal',
-    description: 'NBME predicted scores within 10 points of your target',
-    evidence: 'NBME self-assessments predict actual scores within ±10-15 points (Cuddy et al., 2011)',
-    application: 'Goal 245? Predictions of 235-255 fall within expected confidence interval',
-  },
-  {
-    criterion: '4-6 Practice Tests Total',
-    description: 'Taking adequate number of assessments during dedicated study',
-    evidence: 'Multiple data points provide more reliable readiness determination',
-    application: 'Space tests 1-2 weeks apart during your dedicated study period',
-  },
-];
-
-/**
- * Get readiness explanation text for UI
- */
-export function getReadinessExplanation(hasGoalScore: boolean): string {
-  if (hasGoalScore) {
-    return `**Research-Backed Readiness Criteria:**
-
-Studies show that NBME self-assessments predict actual exam scores within ±10-15 points (Cuddy et al., 2011).
+Since 2022, Step 1 is Pass/Fail. NBME practice exams no longer provide 3-digit predictions.
 
 **You're ready when:**
-• 2+ consecutive practice tests at/above your goal score, OR
-• Improving trend with predictions within 10 points of goal
-• NBME predictions are the gold standard for exam readiness
+• 2+ consecutive practice tests showing 60%+ correct (passing threshold)
+• Improving or stable trend across assessments
+• Consistently answering 120+/200 questions correctly on NBME forms
 
-This tool tracks your progress toward your target score using validated prediction models.`;
+**Key Research:**
+• NBME forms calibrated to ~60% correct = passing performance
+• Free 120: 72+/120 correct (60%) suggests passing likelihood
+• Multiple assessments reduce single-test variability
+
+**Recommendation:** Take 4-6 practice tests during dedicated study. Focus on passing threshold, not score chasing.`;
   }
 
-  return `**Research-Backed Readiness Criteria:**
+  // Step 2 CK - Scored exam
+  if (examType === 'step2ck') {
+    if (hasGoalScore) {
+      return `**Step 2 CK Readiness Criteria (Scored Exam):**
 
-NBME self-assessments are validated predictors of actual exam performance (±10-15 points accuracy).
+NBME self-assessments predict actual Step 2 CK scores within ±10-15 points (Cuddy et al., 2011).
+
+**You're ready when:**
+• 2+ consecutive NBME predictions at/above your goal score, OR
+• Improving trend with predictions within 10 points of goal
+• Average NBME prediction matches target (±10 points)
+
+**Score Benchmarks:**
+• 240+ = Competitive for most residencies
+• 250+ = Strong applicant for competitive specialties
+• 260+ = Top tier performance
+
+**Recommendation:** Take UWSA1, UWSA2, and 2-3 NBME forms. Space tests 1-2 weeks apart during dedicated period.`;
+    }
+
+    return `**Step 2 CK Readiness Criteria (Scored Exam):**
+
+NBME self-assessments are validated predictors (±10-15 points accuracy).
 
 **General Readiness Indicators:**
-• 2+ consecutive practice tests showing 65%+ performance
+• 2+ consecutive scores showing 65%+ correct (~230-240 range)
 • Improving trend across multiple assessments
-• Consistent NBME predictions at passing level (Step 2 CK/Step 3)
+• NBME predictions consistently above 220 (passing threshold)
 
-**Note:** Post-2022, Step 1 is Pass/Fail. Set a target score for Step 2 CK/Step 3 for personalized guidance.
+**Set a target score for personalized guidance:**
+• Competitive residency programs emphasize Step 2 CK scores
+• Your goal determines readiness beyond just "passing"
+• Typical targets: 240+ (most specialties), 250+ (competitive fields)
 
-This tool uses your practice test data to assess exam readiness based on established patterns.`;
+**Recommendation:** Take UWSA1, UWSA2, and 2-3 NBME forms during dedicated study.`;
+  }
+
+  // Step 3 - Scored exam
+  if (examType === 'step3') {
+    if (hasGoalScore) {
+      return `**Step 3 Readiness Criteria (Scored Exam):**
+
+NBME practice exams predict Step 3 performance. Step 3 tests clinical management and is typically easier than Step 2 CK.
+
+**You're ready when:**
+• 2+ consecutive practice tests at/above your goal score
+• Consistent performance on both MCQ and CCS (case simulations)
+• Predictions within 10 points of target
+
+**Score Context:**
+• 220+ = Passing threshold
+• 230+ = Solid performance
+• Step 3 less emphasized in residency applications (you're already matched)
+
+**Recommendation:** Take 2-4 practice tests. Focus on CCS practice as it's unique to Step 3.`;
+    }
+
+    return `**Step 3 Readiness Criteria (Scored Exam):**
+
+Step 3 tests clinical management during PGY-1 year. Typically easier than Step 2 CK.
+
+**Readiness Indicators:**
+• 2+ consecutive practice tests showing 60%+ correct (passing level)
+• Comfortable with CCS (computer-based case simulations)
+• Consistent performance across MCQ and CCS components
+
+**Important Notes:**
+• Step 3 required for medical licensure but less emphasized in applications
+• Most residents take during PGY-1 year
+• CCS practice is essential - unique to Step 3
+
+**Recommendation:** Take 2-4 practice tests including CCS practice. Focus on clinical management concepts.`;
+  }
+
+  // Shelf exams
+  return getShelfReadinessExplanation();
 }
 
 /**
  * Shelf Exam Readiness Criteria
  */
 export function getShelfReadinessExplanation(): string {
-  return `**Shelf Exam Readiness:**
+  return `**Shelf Exam Readiness (Clerkship Finals):**
 
-NBME shelf practice questions strongly correlate with actual shelf exam performance.
+NBME shelf practice questions strongly correlate with actual shelf exam performance during clerkships.
 
-**Readiness Indicators:**
-• 70%+ on practice tests → Honors trajectory
+**Practice Test → Shelf Final Predictions:**
+• 75%+ on practice tests → Honors trajectory (top ~30%)
+• 70-74% on practice tests → High Honors/Honors borderline
 • 65-69% on practice tests → High Pass trajectory
 • 60-64% on practice tests → Pass trajectory
-• <60% on practice tests → At risk, needs intervention
+• <60% on practice tests → At risk, intervention needed
 
-Shelf final exam performance (actual grades) then correlates with Step 2 CK readiness.`;
+**Important Distinctions:**
+• Shelf PRACTICE tests predict your clerkship FINAL exam grade
+• Shelf FINAL exam grades (actual results) then correlate with Step 2 CK readiness
+• Strong shelf finals (multiple honors) predict Step 2 CK scores 245+
+
+**Recommendation:** Do 30-50 practice questions daily during rotation. Take timed practice test at mid-rotation to assess trajectory.`;
 }
 
 /**
@@ -142,12 +134,16 @@ Shelf final exam performance (actual grades) then correlates with Step 2 CK read
 export function getShelfToStep2Explanation(): string {
   return `**Shelf Finals → Step 2 CK Correlation:**
 
-Research shows strong correlation between clerkship shelf exam performance and Step 2 CK scores.
+Research shows strong correlation between clerkship shelf FINAL exam performance and Step 2 CK scores.
 
-**Predictive Patterns:**
-• 67%+ Honors grades → Predicts Step 2 score 250+
-• Consistent High Pass → Predicts Step 2 score 240-249
+**Predictive Patterns (based on actual shelf final grades):**
+• 70%+ Honors grades (5+/7) → Predicts Step 2 score 250+
+• Consistent High Pass/Honors mix → Predicts Step 2 score 240-249
 • Mixed Pass/High Pass → Predicts Step 2 score 230-239
+• Multiple Pass grades only → Suggests extended Step 2 prep needed
 
-This tool uses your actual shelf final exam grades (not practice tests) to predict Step 2 CK readiness.`;
+**Key Insight:**
+This correlation uses your actual shelf FINAL exam results, not practice test scores.
+
+**Recommendation:** After completing 4+ core clerkships, use your actual shelf grades to predict Step 2 readiness and set realistic score goals.`;
 }
