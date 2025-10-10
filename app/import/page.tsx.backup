@@ -171,66 +171,30 @@ export default function ImportPage() {
           </button>
         </div>
 
-        {/* Quick Start Guide - CSV Mode */}
-        {uploadMode === 'csv' && (
-          <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-6 border border-green-200">
-            <h2 className="text-xl font-bold text-gray-800 mb-3">📊 Excel/CSV Import - Easy Offline Tracking</h2>
-            <p className="text-sm text-gray-700 mb-4">
-              Track your errors in Excel when you&apos;re away from the app, then bulk upload later!
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <button
-                onClick={handleDownloadTemplate}
-                className="px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors shadow-md"
-              >
-                📥 Download Excel Template
-              </button>
-              <button
-                onClick={handleDownloadExisting}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-md"
-              >
-                📤 Export Current Errors
-              </button>
-            </div>
-            <p className="text-xs text-gray-600 mt-3">
-              💡 <strong>Tip:</strong> Download the template, fill it in Excel offline, then upload below. Includes example row!
-            </p>
-
-            {/* CSV Help Section */}
-            {showHelp && (
-              <div className="mt-6 pt-6 border-t border-green-300">
-                <h3 className="text-lg font-bold text-gray-800 mb-3">📋 Template Column Guide</h3>
-                <div className="grid md:grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <h4 className="font-semibold text-gray-700 mb-2">Required Fields:</h4>
-                    <ul className="space-y-1 text-gray-600">
-                      <li>• <strong>Description:</strong> What went wrong</li>
-                      <li>• <strong>Organ System:</strong> Cardiovascular, Respiratory, etc.</li>
-                      <li>• <strong>Topic:</strong> Specific concept (e.g., STEMI)</li>
-                    </ul>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-gray-700 mb-2">Optional Fields:</h4>
-                    <ul className="space-y-1 text-gray-600">
-                      <li>• <strong>Date:</strong> YYYY-MM-DD or MM/DD/YYYY</li>
-                      <li>• <strong>Error Type:</strong> knowledge, reasoning, process, time</li>
-                      <li>• <strong>Confidence:</strong> 1-4 or guessed/eliminated/confident/certain</li>
-                      <li>• <strong>Next Steps:</strong> Separate with | or commas</li>
-                      <li>• <strong>Question Bank:</strong> uworld, amboss, nbme, kaplan, rx, other</li>
-                      <li>• <strong>National % Correct:</strong> 0-100</li>
-                    </ul>
-                  </div>
-                </div>
-                <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                  <p className="text-xs text-blue-800">
-                    <strong>Pro Tip:</strong> The downloaded template includes a filled example row.
-                    Use it as a reference, then delete it before uploading your own data!
-                  </p>
-                </div>
-              </div>
-            )}
+        {/* Quick Start Guide */}
+        <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-6 border border-green-200">
+          <h2 className="text-xl font-bold text-gray-800 mb-3">📊 Excel/CSV Import - Easy Offline Tracking</h2>
+          <p className="text-sm text-gray-700 mb-4">
+            Track your errors in Excel when you&apos;re away from the app, then bulk upload later!
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={handleDownloadTemplate}
+              className="px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors shadow-md"
+            >
+              📥 Download Excel Template
+            </button>
+            <button
+              onClick={handleDownloadExisting}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-md"
+            >
+              📤 Export Current Errors
+            </button>
           </div>
-        )}
+          <p className="text-xs text-gray-600 mt-3">
+            💡 <strong>Tip:</strong> Download the template, fill it in Excel offline, then upload below. Includes example row!
+          </p>
+        </div>
 
         {/* Upload Mode Selector */}
         <div className="bg-white rounded-xl shadow-lg p-6">
