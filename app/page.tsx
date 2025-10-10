@@ -20,55 +20,21 @@ export default function Home() {
       {/* Hero Section */}
       <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 md:p-8">
         <div className="max-w-6xl mx-auto">
-          <div className="flex items-center justify-between gap-8 mb-6">
-            {/* Left: Title and subtitle */}
+          <div className="flex items-center justify-center gap-8">
+            {/* Left: Logo Space */}
+            <div className="w-48 h-48 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm border-2 border-white/20">
+              <div className="text-center p-4">
+                <div className="text-6xl mb-2">📊</div>
+                <p className="text-xs text-white/80">Logo Space</p>
+                <p className="text-xs text-white/60 mt-1">Add to public/eat-logo.png</p>
+              </div>
+            </div>
+
+            {/* Right: Title and subtitle */}
             <div className="flex-shrink-0">
               <h1 className="text-3xl md:text-4xl font-bold mb-2">E.A.T. Tracker</h1>
               <p className="text-blue-100 text-sm md:text-base">Error Analysis & Targeted Learning</p>
             </div>
-
-            {/* Center: Large Logo Space */}
-            <div className="flex-1 flex items-center justify-center">
-              <div className="w-48 h-48 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm border-2 border-white/20">
-                <div className="text-center p-4">
-                  <div className="text-6xl mb-2">📊</div>
-                  <p className="text-xs text-white/80">Logo Space</p>
-                  <p className="text-xs text-white/60 mt-1">Add to public/eat-logo.png</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Right: Space for alignment */}
-            <div className="flex-shrink-0 w-48 hidden lg:block"></div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Link
-              href="/log"
-              className="bg-white text-blue-600 rounded-xl p-6 hover:shadow-2xl transition-all transform hover:scale-105"
-            >
-              <div className="text-3xl mb-2">📝</div>
-              <h2 className="text-xl font-bold mb-1">Quick Log</h2>
-              <p className="text-sm text-gray-600">Capture errors in seconds</p>
-            </Link>
-
-            <Link
-              href="/insights"
-              className="bg-white text-indigo-600 rounded-xl p-6 hover:shadow-2xl transition-all transform hover:scale-105"
-            >
-              <div className="text-3xl mb-2">📊</div>
-              <h2 className="text-xl font-bold mb-1">Insights</h2>
-              <p className="text-sm text-gray-600">Discover your patterns</p>
-            </Link>
-
-            <Link
-              href="/plan"
-              className="bg-white text-purple-600 rounded-xl p-6 hover:shadow-2xl transition-all transform hover:scale-105"
-            >
-              <div className="text-3xl mb-2">🎯</div>
-              <h2 className="text-xl font-bold mb-1">Study Plan</h2>
-              <p className="text-sm text-gray-600">7-day evidence-based schedule</p>
-            </Link>
           </div>
         </div>
       </div>
@@ -78,12 +44,6 @@ export default function Home() {
         <div className="bg-white rounded-2xl shadow-lg p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-bold text-gray-800">Your Errors</h2>
-            <Link
-              href="/log"
-              className="text-blue-600 hover:text-blue-700 font-medium text-sm"
-            >
-              + Log Error
-            </Link>
           </div>
 
           {recentErrors.length === 0 ? (
