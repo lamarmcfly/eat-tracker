@@ -10,25 +10,6 @@ import {
   getSpeechRecognition,
 } from '@/lib/voiceProcessing';
 
-// Script templates with integrated voice input
-const SCRIPT_TEMPLATES = [
-  {
-    name: 'Quick Format',
-    template: 'Missed [topic]; [system]; confidence [1-4]; [rushed/not rushed]',
-    example: 'Missed preload vs stroke volume; cardiovascular; confidence 2; rushed'
-  },
-  {
-    name: 'Detailed Format',
-    template: 'Got wrong [topic] on [system]. Error type: [knowledge/reasoning/process/time]. Confidence: [1-4]. Next: [action]',
-    example: 'Got wrong Frank-Starling curve on cardiovascular. Error type: knowledge. Confidence: 2. Next: review cardiac physiology'
-  },
-  {
-    name: 'Natural Speech',
-    template: 'Just say what happened naturally',
-    example: 'I confused preload and afterload again, probably because I was rushing. Need to review'
-  }
-];
-
 export default function QuickLog() {
   const router = useRouter();
   const [system, setSystem] = useState<string>('');
@@ -38,21 +19,20 @@ export default function QuickLog() {
   const [cognitiveLevel, setCognitiveLevel] = useState<CognitiveLevel | ''>('');
   const [nextSteps, setNextSteps] = useState(['']);
 
-  // Voice recording state
   const [isRecording, setIsRecording] = useState(false);
-  const [recordingTemplate, setRecordingTemplate] = useState<number | null>(null);
   const [voiceSupported, setVoiceSupported] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
   const [processingAgent, setProcessingAgent] = useState(false);
+  const [aiStatus, setAiStatus] = useState('');
   const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
     setVoiceSupported(isSpeechRecognitionSupported());
   }, []);
 
-  // Process with agent API and auto-apply all fields
   const processWithAgent = async (text: string) => {
     setProcessingAgent(true);
+    setAiStatus('🤖 Processing...');
+
     try {
       const response = await fetch('/api/agent', {
         method: 'POST',
@@ -61,35 +41,51 @@ export default function QuickLog() {
       });
 
       const data = await response.json();
+      console.log('AI Response:', data);
 
-      if (data.intent === 'log_error' && data.system) {
-        // Auto-apply ALL fields immediately
-        if (data.system) setSystem(data.system);
-        if (data.key_concept) setTopic(data.key_concept);
-        if (data.error_type) setErrorType(data.error_type);
-        if (data.confidence !== undefined) {
-          setConfidence(agentConfidenceToScale(data.confidence));
-        }
-        if (data.corrective_action) {
-          setNextSteps([data.corrective_action]);
-        }
+      let fieldsApplied = 0;
 
-        // Show success message briefly
-        setShowSuccess(true);
-        setTimeout(() => setShowSuccess(false), 3000);
+      if (data.system) {
+        setSystem(data.system);
+        fieldsApplied++;
+      }
+      if (data.key_concept) {
+        setTopic(data.key_concept);
+        fieldsApplied++;
+      }
+      if (data.error_type) {
+        setErrorType(data.error_type);
+        fieldsApplied++;
+      }
+      if (data.confidence !== undefined) {
+        setConfidence(agentConfidenceToScale(data.confidence));
+        fieldsApplied++;
+      }
+      if (data.corrective_action) {
+        setNextSteps([data.corrective_action]);
+        fieldsApplied++;
+      }
+
+      if (fieldsApplied > 0) {
+        setAiStatus(`✅ Auto-filled ${fieldsApplied} field${fieldsApplied > 1 ? 's' : ''}!`);
+        setTimeout(() => setAiStatus(''), 3000);
+      } else {
+        setAiStatus('⚠️ Could not detect fields. Fill manually.');
+        setTimeout(() => setAiStatus(''), 4000);
       }
     } catch (error) {
-      console.error('Agent processing error:', error);
-      alert('Could not process with AI. Please fill fields manually.');
+      console.error('Agent error:', error);
+      setAiStatus('❌ AI unavailable. Fill manually.');
+      setTimeout(() => setAiStatus(''), 4000);
     } finally {
       setProcessingAgent(false);
     }
   };
 
-  const startVoiceForTemplate = (templateIndex: number) => {
+  const startVoiceInput = () => {
     const SpeechRecognition = getSpeechRecognition();
     if (!SpeechRecognition) {
-      alert('Speech recognition not supported. Try Chrome or Edge.');
+      alert('Voice not supported. Try Chrome or Edge.');
       return;
     }
 
@@ -110,25 +106,24 @@ export default function QuickLog() {
 
     recognition.onend = () => {
       setIsRecording(false);
-      setRecordingTemplate(null);
       if (finalTranscript.trim()) {
-        processWithAgent(finalTranscript);
+        processWithAgent(finalTranscript.trim());
       }
     };
 
     recognition.onerror = (event: any) => {
       console.error('Speech error:', event.error);
       setIsRecording(false);
-      setRecordingTemplate(null);
+      setAiStatus('❌ Voice failed. Try again.');
+      setTimeout(() => setAiStatus(''), 3000);
     };
 
     recognition.start();
     setIsRecording(true);
-    setRecordingTemplate(templateIndex);
     recognitionRef.current = recognition;
   };
 
-  const stopVoiceRecording = () => {
+  const stopVoiceInput = () => {
     if (recognitionRef.current) {
       recognitionRef.current.stop();
     }
@@ -167,96 +162,90 @@ export default function QuickLog() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
       <div className="max-w-2xl mx-auto">
         <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">🤖 Smart Error Log</h1>
-          <p className="text-gray-600 mb-6">Click 🎤 on any template to speak - AI auto-fills everything</p>
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">Log Error</h1>
+          <p className="text-gray-600 mb-6">Click 🎤 to speak or fill manually</p>
 
-          {/* Success Message */}
-          {showSuccess && (
-            <div className="bg-green-50 border-2 border-green-300 rounded-xl p-4 mb-6 text-center">
-              <span className="text-2xl">✨</span>
-              <p className="font-bold text-green-900 mt-2">AI Auto-Applied! All fields filled.</p>
-            </div>
-          )}
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-6 mb-6">
+            <div className="text-center">
+              <h3 className="font-bold text-gray-800 mb-2">🎤 Voice Input</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Say: &ldquo;Missed <strong>preload</strong>; <strong>cardiovascular</strong>; confidence <strong>2</strong>&rdquo;
+              </p>
 
-          {/* Script Templates with Voice Buttons */}
-          <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 mb-6">
-            <div className="mb-3">
-              <h3 className="font-bold text-blue-900">📝 Quick Templates</h3>
-              <p className="text-sm text-blue-700">Click microphone to start speaking</p>
-            </div>
+              <button
+                type="button"
+                onClick={isRecording ? stopVoiceInput : startVoiceInput}
+                disabled={!voiceSupported || processingAgent}
+                className={`px-8 py-4 rounded-xl font-bold text-lg transition-all ${
+                  isRecording
+                    ? 'bg-red-500 text-white animate-pulse'
+                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                } disabled:opacity-50 disabled:cursor-not-allowed shadow-lg`}
+              >
+                {isRecording ? '⏹ Stop' : processingAgent ? '⏳ Wait...' : '🎤 Speak'}
+              </button>
 
-            <div className="space-y-3">
-              {SCRIPT_TEMPLATES.map((t, idx) => (
-                <div key={idx} className="bg-white rounded-lg p-4 border border-blue-200">
-                  <div className="font-semibold text-gray-800 mb-1">{t.name}</div>
-                  <div className="text-xs text-gray-500 mb-2">{t.template}</div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex-1 text-sm text-gray-700 italic">&ldquo;{t.example}&rdquo;</div>
-                    <button
-                      type="button"
-                      onClick={() => isRecording && recordingTemplate === idx ? stopVoiceRecording() : startVoiceForTemplate(idx)}
-                      disabled={!voiceSupported || processingAgent}
-                      className={`px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
-                        isRecording && recordingTemplate === idx
-                          ? 'bg-red-500 text-white animate-pulse'
-                          : 'bg-blue-600 text-white hover:bg-blue-700'
-                      } disabled:opacity-50 disabled:cursor-not-allowed`}
-                    >
-                      {isRecording && recordingTemplate === idx ? '⏹ Stop' : processingAgent ? '⏳' : '🎤 Speak'}
-                    </button>
-                  </div>
+              {aiStatus && (
+                <div className={`mt-4 p-3 rounded-lg ${
+                  aiStatus.includes('✅') ? 'bg-green-100 text-green-800' :
+                  aiStatus.includes('🤖') ? 'bg-blue-100 text-blue-800' :
+                  'bg-yellow-100 text-yellow-800'
+                }`}>
+                  {aiStatus}
                 </div>
-              ))}
+              )}
+
+              <div className="mt-4 text-xs text-gray-500 space-y-1 text-left">
+                <p className="font-semibold">What to say:</p>
+                <p>&bull; <strong>Topic</strong> + <strong>System</strong> + <strong>Confidence 1-4</strong></p>
+                <p>&bull; Example: &quot;Missed preload; cardio; confidence 2&quot;</p>
+              </div>
             </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* System/Topic Row */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  System/Category
+                  System *
                 </label>
                 <select
                   value={system}
                   onChange={(e) => setSystem(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none"
                   required
                 >
-                  <option value="">Select system...</option>
+                  <option value="">Select...</option>
                   {ORGAN_SYSTEMS.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
+                    <option key={s} value={s}>{s}</option>
                   ))}
                 </select>
               </div>
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Specific Topic
+                  Topic *
                 </label>
                 <input
                   type="text"
                   value={topic}
                   onChange={(e) => setTopic(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors"
-                  placeholder="e.g., Preload vs Stroke Volume"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none"
+                  placeholder="e.g., Preload"
                   required
                 />
               </div>
             </div>
 
-            {/* Error Type and Confidence Row */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Error Type
+                  Error Type *
                 </label>
                 <select
                   value={errorType}
                   onChange={(e) => setErrorType(e.target.value as ErrorType)}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none"
                   required
                 >
                   <option value="knowledge">Knowledge Gap</option>
@@ -268,23 +257,22 @@ export default function QuickLog() {
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Confidence Level
+                  Confidence *
                 </label>
                 <select
                   value={confidence}
                   onChange={(e) => setConfidence(Number(e.target.value) as Confidence)}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none"
                   required
                 >
-                  <option value={1}>1 - Complete guess (0-25%)</option>
-                  <option value={2}>2 - Narrowed down (25-50%)</option>
+                  <option value={1}>1 - Guess (0-25%)</option>
+                  <option value={2}>2 - Narrowed (25-50%)</option>
                   <option value={3}>3 - Fairly sure (50-75%)</option>
-                  <option value={4}>4 - Very confident (75-100%)</option>
+                  <option value={4}>4 - Confident (75-100%)</option>
                 </select>
               </div>
             </div>
 
-            {/* Cognitive Level */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Cognitive Level (Optional)
@@ -292,15 +280,14 @@ export default function QuickLog() {
               <select
                 value={cognitiveLevel}
                 onChange={(e) => setCognitiveLevel(e.target.value as CognitiveLevel | '')}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none"
               >
                 <option value="">Not specified</option>
-                <option value="first-order">First-Order (Recall/Understanding)</option>
-                <option value="higher-order">Higher-Order (Application/Analysis)</option>
+                <option value="first-order">First-Order (Recall)</option>
+                <option value="higher-order">Higher-Order (Analysis)</option>
               </select>
             </div>
 
-            {/* Next Steps */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Next Steps
@@ -311,14 +298,14 @@ export default function QuickLog() {
                     type="text"
                     value={step}
                     onChange={(e) => updateNextStep(index, e.target.value)}
-                    className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors"
-                    placeholder={`Action step ${index + 1}`}
+                    className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none"
+                    placeholder={`Step ${index + 1}`}
                   />
                   {nextSteps.length > 1 && (
                     <button
                       type="button"
                       onClick={() => removeNextStep(index)}
-                      className="px-4 py-3 bg-red-100 text-red-600 rounded-xl hover:bg-red-200 transition-colors"
+                      className="px-4 py-3 bg-red-100 text-red-600 rounded-xl hover:bg-red-200"
                     >
                       ✕
                     </button>
@@ -330,29 +317,17 @@ export default function QuickLog() {
                 onClick={addNextStep}
                 className="text-blue-600 hover:text-blue-700 font-medium text-sm"
               >
-                + Add Another Step
+                + Add Step
               </button>
             </div>
 
-            {/* Submit Button */}
             <button
               type="submit"
-              className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold text-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl"
+              className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold text-lg hover:from-blue-700 hover:to-indigo-700 shadow-lg"
             >
               📝 Log Error
             </button>
           </form>
-        </div>
-
-        {/* Quick Tips */}
-        <div className="mt-6 bg-white rounded-xl shadow p-4">
-          <h3 className="font-semibold text-gray-800 mb-2">💡 Quick Tips</h3>
-          <ul className="text-sm text-gray-600 space-y-1">
-            <li>🎤 <strong>Voice:</strong> Click microphone on any template and speak naturally</li>
-            <li>✨ <strong>Auto-Fill:</strong> AI detects and fills all fields automatically</li>
-            <li>✏️ <strong>Edit:</strong> Review and adjust any field before submitting</li>
-            <li>⚡ <strong>Fast:</strong> Speak for 5 seconds = fully logged error</li>
-          </ul>
         </div>
       </div>
     </div>
