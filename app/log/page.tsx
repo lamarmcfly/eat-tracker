@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { ErrorLog, ORGAN_SYSTEMS, ErrorType, Confidence, CognitiveLevel } from '@/lib/types';
+import { ErrorLog, ORGAN_SYSTEMS, ErrorType, Confidence, CognitiveLevel, QuestionBank } from '@/lib/types';
 import { agentConfidenceToScale } from '@/lib/confidenceMigration';
 import { storage } from '@/lib/storage';
 import {
@@ -18,6 +18,11 @@ export default function QuickLog() {
   const [confidence, setConfidence] = useState<Confidence>(1);
   const [cognitiveLevel, setCognitiveLevel] = useState<CognitiveLevel | ''>('');
   const [nextSteps, setNextSteps] = useState(['']);
+
+  // Q-bank metadata
+  const [questionBank, setQuestionBank] = useState<QuestionBank | ''>('');
+  const [questionId, setQuestionId] = useState('');
+  const [percentCorrect, setPercentCorrect] = useState<number | ''>('');
 
   const [isRecording, setIsRecording] = useState(false);
   const [voiceSupported, setVoiceSupported] = useState(false);
@@ -152,6 +157,11 @@ export default function QuickLog() {
       confidence,
       cognitiveLevel: cognitiveLevel || undefined,
       nextSteps: nextSteps.filter(s => s.trim()),
+      externalQuestion: (questionBank || questionId || percentCorrect) ? {
+        questionId: questionId || 'unknown',
+        questionBank: (questionBank as QuestionBank) || 'other',
+        percentCorrect: typeof percentCorrect === 'number' ? percentCorrect : undefined,
+      } : undefined,
     };
 
     storage.saveError(error);
@@ -287,6 +297,67 @@ export default function QuickLog() {
                 <option value="higher-order">Higher-Order (Analysis)</option>
               </select>
             </div>
+
+            
+            {/* Q-Bank Info (Optional) */}
+            <div className="bg-purple-50 border-2 border-purple-200 rounded-xl p-4">
+              <h3 className="font-semibold text-purple-900 mb-3">📚 Question Bank Info (Optional)</h3>
+              <p className="text-xs text-purple-700 mb-4">Track which questions you miss for better insights</p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Q-Bank Source
+                  </label>
+                  <select
+                    value={questionBank}
+                    onChange={(e) => setQuestionBank(e.target.value as QuestionBank | '')}
+                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none"
+                  >
+                    <option value="">None</option>
+                    <option value="uworld">UWorld</option>
+                    <option value="amboss">AMBOSS</option>
+                    <option value="nbme">NBME</option>
+                    <option value="kaplan">Kaplan</option>
+                    <option value="rx">Rx (USMLE-Rx)</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Question ID
+                  </label>
+                  <input
+                    type="text"
+                    value={questionId}
+                    onChange={(e) => setQuestionId(e.target.value)}
+                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none"
+                    placeholder="e.g., UW-1234"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    National % Correct
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={percentCorrect}
+                    onChange={(e) => setPercentCorrect(e.target.value ? Number(e.target.value) : '')}
+                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none"
+                    placeholder="e.g., 65"
+                  />
+                </div>
+              </div>
+
+              <p className="text-xs text-gray-500 mt-3">
+                💡 Tracking Q-bank data helps identify if you're below national average on specific topics
+              </p>
+            </div>
+
 
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
