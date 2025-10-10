@@ -275,7 +275,7 @@ export default function ImportPage() {
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition-colors cursor-pointer">
                 <input
                   type="file"
-                  accept=".csv"
+                  accept=".csv,.xlsx,.xls"
                   onChange={handleCSVUpload}
                   className="hidden"
                 />
@@ -284,7 +284,7 @@ export default function ImportPage() {
                   {csvFile ? csvFile.name : 'Click to upload or drag CSV file'}
                 </div>
                 <div className="text-xs text-gray-500 mt-1">
-                  CSV files only - Save Excel as CSV first (File → Save As → CSV)
+                  Supports .csv, .xlsx (Excel will auto-convert to CSV on save)
                 </div>
               </div>
             </label>

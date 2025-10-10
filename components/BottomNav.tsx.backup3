@@ -77,14 +77,8 @@ export default function BottomNav() {
               <Link href="/recommendations" className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${pathname === '/recommendations' ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'}`}>
                 <span className="mr-2">🎯</span>Recommendations
               </Link>
-              <Link href="/readiness" className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${pathname === '/readiness' ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'}`}>
-                <span className="mr-2">🎯</span>Exam Readiness
-              </Link>
               <Link href="/import" className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${pathname === '/import' ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'}`}>
                 <span className="mr-2">📥</span>Import
-              </Link>
-              <Link href="/export" className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${pathname === '/export' ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'}`}>
-                <span className="mr-2">📤</span>Export
               </Link>
             </div>
           </div>

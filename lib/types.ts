@@ -155,3 +155,81 @@ export interface StudyPlan {
   daysUntilExam?: number;
   blocks: StudyBlock[];
 }
+
+// Practice Test Tracking & Exam Readiness Assessment
+export type ExamTarget = 'step1' | 'step2ck' | 'step3' | 'shelf';
+
+export type PracticeTestType =
+  // Step 1
+  | 'nbme-step1'
+  | 'uwsa1-step1'
+  | 'uwsa2-step1'
+  | 'free120-step1'
+  | 'amboss-sa-step1'
+  // Step 2 CK
+  | 'nbme-step2'
+  | 'uwsa1-step2'
+  | 'uwsa2-step2'
+  | 'free120-step2'
+  | 'amboss-sa-step2'
+  // Shelf Exams
+  | 'nbme-shelf-im'        // Internal Medicine
+  | 'nbme-shelf-surgery'
+  | 'nbme-shelf-peds'
+  | 'nbme-shelf-obgyn'
+  | 'nbme-shelf-psych'
+  | 'nbme-shelf-neuro'
+  | 'nbme-shelf-family'
+  | 'nbme-shelf-other'
+  // Other
+  | 'kaplan-sim'
+  | 'other';
+
+export interface PracticeTest {
+  id: string;
+  examTarget: ExamTarget;        // Which exam this prepares for
+  testType: PracticeTestType;
+  testName: string;              // "NBME 25", "UWSA1", "IM Shelf", etc.
+  date: Date;
+  score: number;                 // Actual score (0-300 for NBME, 0-100% for others)
+  percentCorrect: number;        // Always normalized to 0-100%
+  totalQuestions: number;
+  correctAnswers: number;
+
+  // NBME Prediction (if applicable)
+  predictedScore?: number;       // Predicted Step/Shelf score
+
+  // System breakdown (optional)
+  systemBreakdown?: Array<{
+    system: OrganSystem;
+    correct: number;
+    total: number;
+    percentCorrect: number;
+  }>;
+
+  notes?: string;
+}
+
+export interface ExamReadiness {
+  examTarget: ExamTarget;        // Which exam readiness is for
+  isReady: boolean;              // Overall readiness flag
+  confidence: 'high' | 'moderate' | 'low' | 'not-ready';
+
+  // Core readiness criteria (Research-backed: 2 consecutive 65%+ indicates readiness)
+  hasConsecutive65Plus: boolean; // 2 consecutive scores ≥65%
+  consecutiveCount: number;      // How many consecutive 65%+ scores
+  averageScore: number;          // Average across all practice tests
+  recentTrend: 'improving' | 'stable' | 'declining';
+
+  // NBME predictions
+  latestNBMEPrediction?: number; // Most recent NBME predicted score
+  averageNBMEPrediction?: number;
+
+  // Readiness messages
+  message: string;               // Primary readiness message
+  recommendations: string[];     // Actionable recommendations
+
+  // Supporting data
+  totalTests: number;
+  testHistory: PracticeTest[];
+}

@@ -50,11 +50,23 @@ export default function ImportPage() {
   const handleCSVUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    // Validate CSV file type
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      setValidationResults([{
+        valid: false,
+        errors: ['Please upload a CSV file. If you have Excel, save as CSV first.'],
+        warnings: ['In Excel: File → Save As → Choose "CSV (Comma delimited)"'],
+      }]);
+      setCsvWarnings(['In Excel: File → Save As → Choose "CSV (Comma delimited)"']);
+      setPreviewData([]);
+      e.target.value = '' ; // Reset file input
+      return;
+    }
 
     setCsvFile(file);
 
-    const text = await file.text();
     try {
+      const text = await file.text();
       const { errors, warnings } = parseCSVToErrors(text);
 
       if (errors.length === 0) {
