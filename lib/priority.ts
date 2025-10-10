@@ -6,11 +6,13 @@ import { confidenceToPercent } from './confidenceMigration';
 export type UrgencyLevel = 'urgent' | 'high' | 'moderate' | 'low';
 
 export interface PriorityFactors {
-  frequency: number;      // 0-1: normalized error count
-  examWeight: number;     // 0-1: official USMLE weight
-  recency: number;        // 0-1: how recently struggled
-  lowConfidence: number;  // 0-1: proportion of low-confidence errors
-  timePressure: number;   // 0-1: proportion of time-related errors
+  frequency: number;        // 0-1: normalized error count
+  examWeight: number;       // 0-1: official USMLE weight
+  recency: number;          // 0-1: how recently struggled
+  lowConfidence: number;    // 0-1: proportion of low-confidence errors
+  timePressure: number;     // 0-1: proportion of time-related errors
+  qbankDifficulty: number;  // 0-1: Q-bank difficulty (harder = higher priority)
+  performanceGap: number;   // 0-1: below national average (gap = higher priority)
 }
 
 export interface PriorityScore {
@@ -29,13 +31,15 @@ export interface PriorityScore {
   factors: PriorityFactors;
 }
 
-// Scoring weights (sum to 1.0)
+// Enhanced scoring weights (sum to 1.0)
 const WEIGHTS = {
-  FREQUENCY: 0.30,
-  EXAM_WEIGHT: 0.25,
-  RECENCY: 0.20,
-  LOW_CONFIDENCE: 0.15,
-  TIME_PRESSURE: 0.10,
+  FREQUENCY: 0.25,           // Slightly reduced from 0.30
+  EXAM_WEIGHT: 0.20,         // Slightly reduced from 0.25
+  RECENCY: 0.15,             // Reduced from 0.20
+  LOW_CONFIDENCE: 0.15,      // Same
+  TIME_PRESSURE: 0.10,       // Same
+  QBANK_DIFFICULTY: 0.10,    // NEW: Hard questions wrong = urgent
+  PERFORMANCE_GAP: 0.05,     // NEW: You vs national average
 } as const;
 
 // Q-Bank predictive value weights
@@ -100,6 +104,57 @@ function calculateTimePressureScore(pattern: TopicPattern): number {
 }
 
 /**
+ * Calculate Q-bank difficulty score (0-1) based on national % correct
+ * Lower national % = harder question = higher priority when you get it wrong
+ */
+function calculateQBankDifficultyScore(pattern: TopicPattern, errors: ErrorLog[]): number {
+  const topicErrors = errors.filter(e =>
+    e.system === pattern.system && e.topic === pattern.topic
+  );
+
+  const errorsWithPercentCorrect = topicErrors.filter(
+    e => e.externalQuestion?.percentCorrect !== undefined
+  );
+
+  if (errorsWithPercentCorrect.length === 0) return 0;
+
+  // Calculate average difficulty (inverse of national % correct)
+  const avgPercentCorrect = errorsWithPercentCorrect.reduce((sum, e) =>
+    sum + (e.externalQuestion?.percentCorrect || 0), 0
+  ) / errorsWithPercentCorrect.length;
+
+  // Invert: 25% national correct (hard) → 0.75 score (high priority)
+  //         75% national correct (easy) → 0.25 score (lower priority)
+  return 1 - (avgPercentCorrect / 100);
+}
+
+/**
+ * Calculate performance gap score (0-1) based on you vs national average
+ * If 75% of people get it right and you got it wrong → you're in bottom 25%
+ * Higher national % = bigger gap = higher priority
+ */
+function calculatePerformanceGapScore(pattern: TopicPattern, errors: ErrorLog[]): number {
+  const topicErrors = errors.filter(e =>
+    e.system === pattern.system && e.topic === pattern.topic
+  );
+
+  const errorsWithPercentCorrect = topicErrors.filter(
+    e => e.externalQuestion?.percentCorrect !== undefined
+  );
+
+  if (errorsWithPercentCorrect.length === 0) return 0;
+
+  // Calculate average national performance where student failed
+  const avgPercentCorrect = errorsWithPercentCorrect.reduce((sum, e) =>
+    sum + (e.externalQuestion?.percentCorrect || 0), 0
+  ) / errorsWithPercentCorrect.length;
+
+  // If 75% got it right and you got it wrong → 0.75 score (you're behind)
+  // If 25% got it right and you got it wrong → 0.25 score (everyone struggles)
+  return avgPercentCorrect / 100;
+}
+
+/**
  * Calculate composite priority score for a topic pattern
  */
 export function calculatePriorityScore(
@@ -120,6 +175,8 @@ export function calculatePriorityScore(
     recency: calculateRecencyScore(daysSince),
     lowConfidence: calculateLowConfidenceScore(pattern, allErrors),
     timePressure: calculateTimePressureScore(pattern),
+    qbankDifficulty: calculateQBankDifficultyScore(pattern, allErrors),
+    performanceGap: calculatePerformanceGapScore(pattern, allErrors),
   };
 
   // Calculate weighted composite score (0-100)
@@ -128,7 +185,9 @@ export function calculatePriorityScore(
     factors.examWeight * WEIGHTS.EXAM_WEIGHT +
     factors.recency * WEIGHTS.RECENCY +
     factors.lowConfidence * WEIGHTS.LOW_CONFIDENCE +
-    factors.timePressure * WEIGHTS.TIME_PRESSURE
+    factors.timePressure * WEIGHTS.TIME_PRESSURE +
+    factors.qbankDifficulty * WEIGHTS.QBANK_DIFFICULTY +
+    factors.performanceGap * WEIGHTS.PERFORMANCE_GAP
   ) * 100;
 
   // Apply Q-Bank weighting multiplier
@@ -216,6 +275,20 @@ function generateReasons(
     reasons.push('time pressure');
   } else if (factors.timePressure > 0.3) {
     reasons.push('timing issues');
+  }
+
+  // Q-Bank difficulty
+  if (factors.qbankDifficulty > 0.7) {
+    reasons.push('hard question');
+  } else if (factors.qbankDifficulty > 0.5) {
+    reasons.push('challenging');
+  }
+
+  // Performance gap
+  if (factors.performanceGap > 0.7) {
+    reasons.push('below average');
+  } else if (factors.performanceGap > 0.5) {
+    reasons.push('gap exists');
   }
 
   // Dominant error type (if significant)
