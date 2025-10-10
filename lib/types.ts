@@ -1,7 +1,7 @@
 // Core data models for E.A.T. Tracker
 
 export type ErrorType = 'knowledge' | 'reasoning' | 'process' | 'time';
-export type Confidence = 'guessed' | 'eliminated' | 'confident' | 'certain';
+export type Confidence = 1 | 2 | 3 | 4 | 'guessed' | 'eliminated' | 'confident' | 'certain'; // Hybrid: support both old and new
 export type CognitiveLevel = 'first-order' | 'higher-order';
 
 // Cognitive Level Definitions:

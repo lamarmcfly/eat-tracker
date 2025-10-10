@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { ErrorLog, ORGAN_SYSTEMS, ErrorType, Confidence, CognitiveLevel } from '@/lib/types';
-import { agentConfidenceToScale, getConfidenceLabel, getConfidenceDescription } from '@/lib/confidenceMigration';
 import { storage } from '@/lib/storage';
 import {
   processVoiceTranscript,
@@ -37,7 +36,7 @@ export default function QuickLog() {
   const [system, setSystem] = useState<string>('');
   const [topic, setTopic] = useState('');
   const [errorType, setErrorType] = useState<ErrorType>('knowledge');
-  const [confidence, setConfidence] = useState<Confidence>(1);
+  const [confidence, setConfidence] = useState<Confidence>('guessed');
   const [cognitiveLevel, setCognitiveLevel] = useState<CognitiveLevel | ''>('');
   const [nextSteps, setNextSteps] = useState(['']);
 
@@ -74,7 +73,11 @@ export default function QuickLog() {
 
         // Map numeric confidence to categories
         if (data.confidence) {
-          setConfidence(agentConfidenceToScale(data.confidence));
+          const conf = data.confidence;
+          if (conf < 25) setConfidence('guessed');
+          else if (conf < 50) setConfidence('eliminated');
+          else if (conf < 75) setConfidence('confident');
+          else setConfidence('certain');
         }
 
         if (data.corrective_action && (!nextSteps[0] || nextSteps[0] === '')) {
@@ -86,7 +89,7 @@ export default function QuickLog() {
           system: data.system,
           topic: data.key_concept,
           errorType: data.error_type,
-          confidence: agentConfidenceToScale(data.confidence),
+          confidence: data.confidence < 25 ? 'guessed' : data.confidence < 50 ? 'eliminated' : data.confidence < 75 ? 'confident' : 'certain',
           cognitiveLevel: 'first-order',
           nextSteps: [data.corrective_action],
           detectedKeywords: [data.system, data.error_type, data.key_concept],
@@ -439,14 +442,14 @@ export default function QuickLog() {
                 </label>
                 <select
                   value={confidence}
-                  onChange={(e) => setConfidence(Number(e.target.value) as Confidence)}
+                  onChange={(e) => setConfidence(e.target.value as Confidence)}
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors"
                   required
                 >
-                  <option value={1}>1 - Complete guess (0-25%)</option>
-                  <option value={2}>2 - Narrowed down (25-50%)</option>
-                  <option value={3}>3 - Fairly sure (50-75%)</option>
-                  <option value={4}>4 - Very confident (75-100%)</option>
+                  <option value="guessed">Guessed (0-25%)</option>
+                  <option value="eliminated">Eliminated Options (25-50%)</option>
+                  <option value="confident">Fairly Confident (50-75%)</option>
+                  <option value="certain">Very Confident (75-100%)</option>
                 </select>
               </div>
             </div>

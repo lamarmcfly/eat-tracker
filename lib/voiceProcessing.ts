@@ -1,5 +1,6 @@
 // Voice input processing and auto-tagging
 import { OrganSystem, ErrorType, Confidence, CognitiveLevel } from './types';
+import { migrateConfidence } from './confidenceMigration';
 import { findOrganSystemByName } from './taxonomy';
 
 export interface VoiceTranscript {
@@ -13,13 +14,13 @@ export interface AutoTagSuggestions {
   systemId?: string;
   topic?: string;
   errorType?: ErrorType;
-  confidence?: Confidence;
+  confidence?: 1 | 2 | 3 | 4; // Numeric confidence
   cognitiveLevel?: CognitiveLevel;
   nextSteps?: string[];
   detectedKeywords: string[];
   suggestions: {
     field: string;
-    value: string;
+    value: string | number;
     confidence: number;
     reason: string;
   }[];
@@ -245,7 +246,7 @@ export function processVoiceTranscript(transcript: string): AutoTagSuggestions {
     systemId: detectedSystemId,
     topic: detectedTopic,
     errorType: detectedErrorType,
-    confidence: detectedConfidence,
+    confidence: detectedConfidence ? migrateConfidence(detectedConfidence) : undefined,
     cognitiveLevel: detectedCognitiveLevel,
     nextSteps: nextSteps.length > 0 ? nextSteps : undefined,
     detectedKeywords: [...new Set(detectedKeywords)],

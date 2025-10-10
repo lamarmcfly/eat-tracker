@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { storage } from '@/lib/storage';
+import { migrateConfidence } from '@/lib/confidenceMigration';
 import {
   validateImport,
   validateBatchImport,
@@ -70,7 +71,7 @@ export default function ImportPage() {
         systemId: item.systemId,
         topic: item.topic!,
         errorType: item.errorType || 'knowledge',
-        confidence: item.confidence || 'guessed',
+        confidence: item.confidence ? migrateConfidence(item.confidence) : 1,
         cognitiveLevel: item.cognitiveLevel,
         nextSteps: item.nextSteps || [],
         externalQuestion: item.externalQuestion,

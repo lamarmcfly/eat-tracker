@@ -1,6 +1,7 @@
 // Multi-factor priority scoring engine
 import { ErrorLog, TopicPattern, ErrorType } from './types';
 import { getExamWeight, getExamWeightFromLegacySystem, isHighYield } from './examWeights';
+import { confidenceToPercent } from './confidenceMigration';
 
 export type UrgencyLevel = 'urgent' | 'high' | 'moderate' | 'low';
 
@@ -71,8 +72,7 @@ function calculateLowConfidenceScore(pattern: TopicPattern, errors: ErrorLog[]):
 
   if (topicErrors.length === 0) return 0;
 
-  const confidenceValues = { guessed: 1, eliminated: 0.7, confident: 0.3, certain: 0 };
-  const sum = topicErrors.reduce((acc, e) => acc + confidenceValues[e.confidence], 0);
+  const sum = topicErrors.reduce((acc, e) => acc + (1 - (confidenceToPercent(e.confidence) / 100)), 0);
 
   return sum / topicErrors.length;
 }

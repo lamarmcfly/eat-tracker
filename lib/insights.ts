@@ -1,5 +1,6 @@
 // Analytics and pattern detection
 import { ErrorLog, TopicPattern, ErrorType } from './types';
+import { confidenceToPercent } from './confidenceMigration';
 
 export function analyzePatterns(errors: ErrorLog[]): TopicPattern[] {
   const topicMap = new Map<string, TopicPattern>();
@@ -32,12 +33,11 @@ export function analyzePatterns(errors: ErrorLog[]): TopicPattern[] {
     }
   });
 
-  // Calculate average confidence
-  const confidenceValue = { guessed: 0, eliminated: 1, confident: 2, certain: 3 };
+  // Calculate average confidence using confidenceToPercent
   topicMap.forEach((pattern, key) => {
     const topicErrors = errors.filter(e => `${e.system}:${e.topic}` === key);
-    const sum = topicErrors.reduce((acc, e) => acc + confidenceValue[e.confidence], 0);
-    pattern.averageConfidence = sum / topicErrors.length;
+    const avgConf = topicErrors.reduce((sum, e) => sum + confidenceToPercent(e.confidence), 0) / topicErrors.length;
+    pattern.averageConfidence = avgConf;
   });
 
   return Array.from(topicMap.values()).sort((a, b) => b.errorCount - a.errorCount);
