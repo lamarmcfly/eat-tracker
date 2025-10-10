@@ -283,9 +283,9 @@ export default function ImportPage() {
               Fill out the downloaded template in Excel, then upload it here. Works with Excel exports and CSV files.
             </p>
 
-            <label className="block">
+            <label htmlFor="csv-file-input" className="block">
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition-colors cursor-pointer">
-                <input
+                <input id="csv-file-input"
                   type="file"
                   accept=".csv"
                   onChange={handleCSVUpload}
