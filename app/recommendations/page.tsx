@@ -5,6 +5,8 @@ import { storage } from '@/lib/storage';
 import { generateRecommendations, getStrategyInfo } from '@/lib/recommendationEngine';
 import { Recommendation, LearningStrategy } from '@/lib/learningStrategies';
 import { ErrorLog } from '@/lib/types';
+import { LEARNING_LESSONS, LearningLesson } from '@/lib/learningLessons';
+import LearningLessonModal from '@/components/LearningLessonModal';
 
 // Strategy icons and colors
 const strategyIcons: Record<LearningStrategy, string> = {
@@ -78,6 +80,7 @@ export default function Recommendations() {
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [examDate, setExamDate] = useState<Date | undefined>();
   const [groupByStrategy, setGroupByStrategy] = useState(false);
+  const [selectedLesson, setSelectedLesson] = useState<LearningLesson | null>(null);
 
   useEffect(() => {
     const loadedErrors = storage.getErrors();
@@ -311,9 +314,52 @@ export default function Recommendations() {
               </div>
             )}
 
+            {/* Premium Learning Lessons - Science of Learning */}
+            <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-2xl shadow-lg p-6 border-2 border-purple-200">
+              <div className="flex items-center gap-3 mb-2">
+                <span className="text-2xl">🎓</span>
+                <h2 className="text-xl font-bold text-gray-800">Science of Learning Mini-Lessons</h2>
+                <span className="px-3 py-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xs font-bold rounded-full">
+                  PREMIUM
+                </span>
+              </div>
+              <p className="text-sm text-gray-600 mb-4">
+                Deep-dive into evidence-based learning strategies with research citations, practical examples, and USMLE applications.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {Object.values(LEARNING_LESSONS).map((lesson) => (
+                  <button
+                    key={lesson.id}
+                    onClick={() => setSelectedLesson(lesson)}
+                    className="text-left border-2 border-gray-200 rounded-lg p-4 hover:border-purple-400 hover:shadow-md transition-all bg-white"
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="text-3xl flex-shrink-0">{lesson.icon}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-semibold text-gray-800">{lesson.title}</h3>
+                          {lesson.importance === 'HIGH' && (
+                            <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-bold rounded">
+                              HIGH PRIORITY
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-600 mb-2">{lesson.tagline}</p>
+                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                          <span>⏱️ {lesson.timeInvestment}</span>
+                          <span>•</span>
+                          <span>📊 {lesson.difficulty}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Evidence-Based Learning Guide */}
             <div className="bg-white rounded-2xl shadow-lg p-6">
-              <h2 className="text-xl font-bold text-gray-800 mb-4">Evidence-Based Learning Strategies</h2>
+              <h2 className="text-xl font-bold text-gray-800 mb-4">Quick Reference: Evidence-Based Learning Strategies</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {Object.entries(LEARNING_STRATEGIES).map(([key, strategy]) => (
                   <div key={key} className="border border-gray-200 rounded-lg p-4">
@@ -330,6 +376,15 @@ export default function Recommendations() {
               </div>
             </div>
           </>
+        )}
+
+        {/* Learning Lesson Modal */}
+        {selectedLesson && (
+          <LearningLessonModal
+            lesson={selectedLesson}
+            isOpen={!!selectedLesson}
+            onClose={() => setSelectedLesson(null)}
+          />
         )}
       </div>
     </div>

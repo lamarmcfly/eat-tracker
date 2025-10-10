@@ -50,11 +50,23 @@ export default function ImportPage() {
   const handleCSVUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    // Validate CSV file type
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      setValidationResults([{
+        valid: false,
+        errors: ['Please upload a CSV file. If you have Excel, save as CSV first.'],
+        warnings: ['In Excel: File → Save As → Choose "CSV (Comma delimited)"'],
+      }]);
+      setCsvWarnings(['In Excel: File → Save As → Choose "CSV (Comma delimited)"']);
+      setPreviewData([]);
+      e.target.value = '' ; // Reset file input
+      return;
+    }
 
     setCsvFile(file);
 
-    const text = await file.text();
     try {
+      const text = await file.text();
       const { errors, warnings } = parseCSVToErrors(text);
 
       if (errors.length === 0) {
@@ -275,7 +287,7 @@ export default function ImportPage() {
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition-colors cursor-pointer">
                 <input
                   type="file"
-                  accept=".csv,.xlsx,.xls"
+                  accept=".csv"
                   onChange={handleCSVUpload}
                   className="hidden"
                 />
@@ -284,7 +296,7 @@ export default function ImportPage() {
                   {csvFile ? csvFile.name : 'Click to upload or drag CSV file'}
                 </div>
                 <div className="text-xs text-gray-500 mt-1">
-                  Supports .csv, .xlsx (Excel will auto-convert to CSV on save)
+                  CSV files only - Save Excel as CSV first (File → Save As → CSV)
                 </div>
               </div>
             </label>
