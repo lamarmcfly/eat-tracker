@@ -175,7 +175,7 @@ export default function ImportPage() {
       <div className="max-w-5xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold text-gray-800">Import Errors</h1>
-          <button
+          <button type="button"
             onClick={() => setShowHelp(!showHelp)}
             className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
@@ -191,13 +191,13 @@ export default function ImportPage() {
               Track your errors in Excel when you&apos;re away from the app, then bulk upload later!
             </p>
             <div className="flex flex-wrap gap-3">
-              <button
+              <button type="button"
                 onClick={handleDownloadTemplate}
                 className="px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors shadow-md"
               >
                 📥 Download Excel Template
               </button>
-              <button
+              <button type="button"
                 onClick={handleDownloadExisting}
                 className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-md"
               >
@@ -248,7 +248,7 @@ export default function ImportPage() {
         <div className="bg-white rounded-xl shadow-lg p-6">
           <h2 className="text-xl font-bold text-gray-800 mb-4">Choose Import Method</h2>
           <div className="flex gap-3">
-            <button
+            <button type="button"
               onClick={() => setUploadMode('csv')}
               className={`flex-1 px-6 py-4 rounded-lg font-medium transition-colors border-2 ${
                 uploadMode === 'csv'
@@ -260,7 +260,7 @@ export default function ImportPage() {
               <div className="font-bold">Excel/CSV Upload</div>
               <div className="text-xs mt-1">Easy for medical students</div>
             </button>
-            <button
+            <button type="button"
               onClick={() => setUploadMode('json')}
               className={`flex-1 px-6 py-4 rounded-lg font-medium transition-colors border-2 ${
                 uploadMode === 'json'
@@ -303,7 +303,7 @@ export default function ImportPage() {
 
             {csvFile && (
               <div className="mt-4 flex gap-3">
-                <button
+                <button type="button"
                   onClick={() => {
                     setCsvFile(null);
                     setValidationResults([]);
@@ -316,6 +316,18 @@ export default function ImportPage() {
                 </button>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Success indicator when CSV is loaded */}
+        {uploadMode === "csv" && previewData.length > 0 && (
+          <div className="bg-green-50 border-2 border-green-200 rounded-xl p-6">
+            <p className="text-green-800 font-medium text-lg">
+              ✅ CSV processed successfully! {previewData.length} error(s) ready to import.
+            </p>
+            <p className="text-sm text-green-600 mt-2">
+              📋 Scroll down to review the preview and click "Confirm & Import" button.
+            </p>
           </div>
         )}
 
@@ -388,14 +400,14 @@ export default function ImportPage() {
               />
 
               <div className="flex gap-3 mt-4">
-                <button
+                <button type="button"
                   onClick={handleValidate}
                   disabled={!jsonInput.trim()}
                   className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
                 >
                   Validate & Preview
                 </button>
-                <button
+                <button type="button"
                   onClick={() => {
                     setJsonInput('');
                     setValidationResults([]);
@@ -540,13 +552,13 @@ export default function ImportPage() {
             </div>
 
             <div className="flex gap-3 mt-6">
-              <button
+              <button type="button"
                 onClick={handleImport}
                 className="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
               >
                 ✅ Confirm & Import {previewData.length} {previewData.length === 1 ? 'Error' : 'Errors'}
               </button>
-              <button
+              <button type="button"
                 onClick={() => router.push('/insights')}
                 className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
               >
