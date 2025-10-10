@@ -141,6 +141,69 @@ export default function Insights() {
               </div>
             </div>
 
+            {/* Q-Bank Breakdown */}
+            {errors.some(e => e.externalQuestion?.questionBank) && (
+              <div className="bg-white rounded-2xl shadow-lg p-6">
+                <h2 className="text-2xl font-bold text-gray-800 mb-4">📚 Question Bank Sources</h2>
+                <p className="text-sm text-gray-600 mb-4">Errors from higher-quality Q-banks (UWorld, NBME) are weighted more heavily in priority scoring.</p>
+                <div className="space-y-3">
+                  {(() => {
+                    const qbankCounts = errors
+                      .filter(e => e.externalQuestion?.questionBank)
+                      .reduce((acc, e) => {
+                        const qbank = e.externalQuestion?.questionBank || 'other';
+                        acc[qbank] = (acc[qbank] || 0) + 1;
+                        return acc;
+                      }, {} as Record<string, number>);
+
+                    const qbankLabels: Record<string, string> = {
+                      uworld: 'UWorld',
+                      nbme: 'NBME',
+                      amboss: 'AMBOSS',
+                      kaplan: 'Kaplan',
+                      rx: 'USMLE-Rx',
+                      other: 'Other',
+                    };
+
+                    const qbankColors: Record<string, string> = {
+                      uworld: 'bg-yellow-500',
+                      nbme: 'bg-blue-500',
+                      amboss: 'bg-purple-500',
+                      kaplan: 'bg-green-500',
+                      rx: 'bg-pink-500',
+                      other: 'bg-gray-500',
+                    };
+
+                    const totalQBankErrors = Object.values(qbankCounts).reduce((a, b) => a + b, 0);
+
+                    return Object.entries(qbankCounts)
+                      .sort((a, b) => b[1] - a[1])
+                      .map(([qbank, count]) => {
+                        const percentage = (count / totalQBankErrors) * 100;
+                        return (
+                          <div key={qbank}>
+                            <div className="flex justify-between mb-1">
+                              <span className="text-sm font-medium text-gray-700">
+                                {qbankLabels[qbank] || qbank}
+                              </span>
+                              <span className="text-sm text-gray-600">
+                                {count} ({percentage.toFixed(0)}%)
+                              </span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2.5">
+                              <div
+                                className={`h-2.5 rounded-full ${qbankColors[qbank] || 'bg-gray-500'}`}
+                                style={{ width: `${percentage}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      });
+                  })()}
+                </div>
+              </div>
+            )}
+
             {/* Top Topics */}
             <div className="bg-white rounded-2xl shadow-lg p-6">
               <h2 className="text-2xl font-bold text-gray-800 mb-4">Top Topics by Error Count</h2>

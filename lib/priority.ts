@@ -38,6 +38,17 @@ const WEIGHTS = {
   TIME_PRESSURE: 0.10,
 } as const;
 
+// Q-Bank predictive value weights
+// Higher weight = more predictive of exam performance
+const QBANK_WEIGHTS: Record<string, number> = {
+  uworld: 1.0,      // Gold standard - highest correlation with Step scores
+  nbme: 0.95,       // Official NBME content - near-perfect exam simulation
+  amboss: 0.85,     // Strong clinical vignettes and explanations
+  kaplan: 0.6,      // More basic, less Step-like
+  rx: 0.5,          // Entry level, good for fundamentals
+  other: 0.4,       // Unknown quality/relevance
+};
+
 /**
  * Calculate frequency score (0-1) based on error count
  * Uses logarithmic scaling to prevent outliers from dominating
@@ -112,13 +123,31 @@ export function calculatePriorityScore(
   };
 
   // Calculate weighted composite score (0-100)
-  const score = (
+  let score = (
     factors.frequency * WEIGHTS.FREQUENCY +
     factors.examWeight * WEIGHTS.EXAM_WEIGHT +
     factors.recency * WEIGHTS.RECENCY +
     factors.lowConfidence * WEIGHTS.LOW_CONFIDENCE +
     factors.timePressure * WEIGHTS.TIME_PRESSURE
   ) * 100;
+
+  // Apply Q-Bank weighting multiplier
+  // Errors from high-quality Q-banks (UWorld, NBME) get prioritized
+  const topicErrors = allErrors.filter(e =>
+    e.system === pattern.system && e.topic === pattern.topic
+  );
+
+  if (topicErrors.length > 0 && topicErrors.some(e => e.externalQuestion?.questionBank)) {
+    // Calculate average Q-bank quality for this topic
+    const qbankErrors = topicErrors.filter(e => e.externalQuestion?.questionBank);
+    const avgQBankWeight = qbankErrors.reduce((sum, e) => {
+      const qbank = e.externalQuestion?.questionBank || 'other';
+      return sum + (QBANK_WEIGHTS[qbank] || 0.4);
+    }, 0) / qbankErrors.length;
+
+    // Apply multiplier (0.4 to 1.0 range means -60% to no change)
+    score *= avgQBankWeight;
+  }
 
   // Determine urgency level
   const urgency: UrgencyLevel =
