@@ -3,26 +3,24 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { ErrorLog, ORGAN_SYSTEMS, ErrorType, Confidence, CognitiveLevel } from '@/lib/types';
-import { agentConfidenceToScale, getConfidenceLabel, getConfidenceDescription } from '@/lib/confidenceMigration';
+import { agentConfidenceToScale } from '@/lib/confidenceMigration';
 import { storage } from '@/lib/storage';
 import {
-  processVoiceTranscript,
   isSpeechRecognitionSupported,
   getSpeechRecognition,
-  type AutoTagSuggestions
 } from '@/lib/voiceProcessing';
 
-// Script templates for efficient logging
+// Script templates with integrated voice input
 const SCRIPT_TEMPLATES = [
   {
     name: 'Quick Format',
-    template: 'Missed [topic]; [system]; confidence [0-100]; [rushed/not rushed]',
-    example: 'Missed preload vs stroke volume; cardiovascular; confidence 40; rushed'
+    template: 'Missed [topic]; [system]; confidence [1-4]; [rushed/not rushed]',
+    example: 'Missed preload vs stroke volume; cardiovascular; confidence 2; rushed'
   },
   {
     name: 'Detailed Format',
-    template: 'Got wrong [topic] on [system]. Error type: [knowledge/reasoning/process/time]. Confidence: [0-100]. Next: [action]',
-    example: 'Got wrong Frank-Starling curve on cardiovascular. Error type: knowledge. Confidence: 40. Next: review cardiac physiology'
+    template: 'Got wrong [topic] on [system]. Error type: [knowledge/reasoning/process/time]. Confidence: [1-4]. Next: [action]',
+    example: 'Got wrong Frank-Starling curve on cardiovascular. Error type: knowledge. Confidence: 2. Next: review cardiac physiology'
   },
   {
     name: 'Natural Speech',
@@ -33,7 +31,6 @@ const SCRIPT_TEMPLATES = [
 
 export default function QuickLog() {
   const router = useRouter();
-  const [description, setDescription] = useState('');
   const [system, setSystem] = useState<string>('');
   const [topic, setTopic] = useState('');
   const [errorType, setErrorType] = useState<ErrorType>('knowledge');
@@ -43,10 +40,9 @@ export default function QuickLog() {
 
   // Voice recording state
   const [isRecording, setIsRecording] = useState(false);
+  const [recordingTemplate, setRecordingTemplate] = useState<number | null>(null);
   const [voiceSupported, setVoiceSupported] = useState(false);
-  const [autoSuggestions, setAutoSuggestions] = useState<AutoTagSuggestions | null>(null);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [showTemplates, setShowTemplates] = useState(true);
+  const [showSuccess, setShowSuccess] = useState(false);
   const [processingAgent, setProcessingAgent] = useState(false);
   const recognitionRef = useRef<any>(null);
 
@@ -54,7 +50,7 @@ export default function QuickLog() {
     setVoiceSupported(isSpeechRecognitionSupported());
   }, []);
 
-  // Process with agent API for intelligent auto-fill
+  // Process with agent API and auto-apply all fields
   const processWithAgent = async (text: string) => {
     setProcessingAgent(true);
     try {
@@ -67,139 +63,75 @@ export default function QuickLog() {
       const data = await response.json();
 
       if (data.intent === 'log_error' && data.system) {
-        // Auto-populate fields from agent
-        if (data.system && !system) setSystem(data.system);
-        if (data.key_concept && !topic) setTopic(data.key_concept);
+        // Auto-apply ALL fields immediately
+        if (data.system) setSystem(data.system);
+        if (data.key_concept) setTopic(data.key_concept);
         if (data.error_type) setErrorType(data.error_type);
-
-        // Map numeric confidence to categories
-        if (data.confidence) {
+        if (data.confidence !== undefined) {
           setConfidence(agentConfidenceToScale(data.confidence));
         }
-
-        if (data.corrective_action && (!nextSteps[0] || nextSteps[0] === '')) {
+        if (data.corrective_action) {
           setNextSteps([data.corrective_action]);
         }
 
-        // Show success message
-        setAutoSuggestions({
-          system: data.system,
-          topic: data.key_concept,
-          errorType: data.error_type,
-          confidence: agentConfidenceToScale(data.confidence),
-          cognitiveLevel: 'first-order',
-          nextSteps: [data.corrective_action],
-          detectedKeywords: [data.system, data.error_type, data.key_concept],
-          suggestions: [
-            { field: 'system', value: data.system, confidence: 90, reason: 'Detected from medical keywords' },
-            { field: 'topic', value: data.key_concept, confidence: 85, reason: 'Extracted key concept' },
-            { field: 'errorType', value: data.error_type, confidence: 80, reason: `${data.error_type} pattern detected` }
-          ]
-        });
-        setShowSuggestions(true);
+        // Show success message briefly
+        setShowSuccess(true);
+        setTimeout(() => setShowSuccess(false), 3000);
       }
     } catch (error) {
       console.error('Agent processing error:', error);
-      // Fallback to voice processing
-      const suggestions = processVoiceTranscript(text);
-      if (suggestions.suggestions.length > 0) {
-        setAutoSuggestions(suggestions);
-        setShowSuggestions(true);
-      }
+      alert('Could not process with AI. Please fill fields manually.');
     } finally {
       setProcessingAgent(false);
     }
   };
 
-  const startVoiceRecording = () => {
+  const startVoiceForTemplate = (templateIndex: number) => {
     const SpeechRecognition = getSpeechRecognition();
     if (!SpeechRecognition) {
-      alert('Speech recognition is not supported in your browser. Try Chrome or Edge.');
+      alert('Speech recognition not supported. Try Chrome or Edge.');
       return;
     }
 
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
-    recognition.interimResults = true;
+    recognition.interimResults = false;
     recognition.lang = 'en-US';
 
     let finalTranscript = '';
 
     recognition.onresult = (event: any) => {
-      let interimTranscript = '';
       for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcript = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
-          finalTranscript += transcript + ' ';
-        } else {
-          interimTranscript += transcript;
+          finalTranscript += event.results[i][0].transcript + ' ';
         }
       }
-      setDescription(finalTranscript + interimTranscript);
     };
 
     recognition.onend = () => {
       setIsRecording(false);
+      setRecordingTemplate(null);
       if (finalTranscript.trim()) {
         processWithAgent(finalTranscript);
       }
     };
 
     recognition.onerror = (event: any) => {
-      console.error('Speech recognition error:', event.error);
+      console.error('Speech error:', event.error);
       setIsRecording(false);
+      setRecordingTemplate(null);
     };
 
     recognition.start();
     setIsRecording(true);
+    setRecordingTemplate(templateIndex);
     recognitionRef.current = recognition;
   };
 
   const stopVoiceRecording = () => {
     if (recognitionRef.current) {
       recognitionRef.current.stop();
-      setIsRecording(false);
     }
-  };
-
-  const applySuggestion = (field: string, value: any) => {
-    switch (field) {
-      case 'system':
-        setSystem(value);
-        break;
-      case 'topic':
-        setTopic(value);
-        break;
-      case 'errorType':
-        setErrorType(value as ErrorType);
-        break;
-      case 'confidence':
-        setConfidence(value as Confidence);
-        break;
-      case 'cognitiveLevel':
-        setCognitiveLevel(value as CognitiveLevel);
-        break;
-    }
-  };
-
-  const applyAllSuggestions = () => {
-    if (!autoSuggestions) return;
-
-    if (autoSuggestions.system) setSystem(autoSuggestions.system);
-    if (autoSuggestions.topic) setTopic(autoSuggestions.topic);
-    if (autoSuggestions.errorType) setErrorType(autoSuggestions.errorType);
-    if (autoSuggestions.confidence) setConfidence(autoSuggestions.confidence);
-    if (autoSuggestions.cognitiveLevel) setCognitiveLevel(autoSuggestions.cognitiveLevel);
-    if (autoSuggestions.nextSteps && autoSuggestions.nextSteps.length > 0) {
-      setNextSteps(autoSuggestions.nextSteps);
-    }
-
-    setShowSuggestions(false);
-  };
-
-  const useTemplate = (template: string) => {
-    setDescription(template);
-    setShowTemplates(false);
   };
 
   const addNextStep = () => setNextSteps([...nextSteps, '']);
@@ -212,18 +144,13 @@ export default function QuickLog() {
     setNextSteps(nextSteps.filter((_, i) => i !== index));
   };
 
-  const handleSmartProcess = async () => {
-    if (!description.trim()) return;
-    await processWithAgent(description);
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     const error: ErrorLog = {
       id: `error-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       timestamp: new Date(),
-      description,
+      description: `${topic} - ${system}`,
       system: system as ErrorLog['system'],
       topic,
       errorType,
@@ -241,143 +168,49 @@ export default function QuickLog() {
       <div className="max-w-2xl mx-auto">
         <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8">
           <h1 className="text-3xl font-bold text-gray-800 mb-2">🤖 Smart Error Log</h1>
-          <p className="text-gray-600 mb-6">Speak or type naturally - AI will auto-fill the details</p>
+          <p className="text-gray-600 mb-6">Click 🎤 on any template to speak - AI auto-fills everything</p>
 
-          {/* Script Templates */}
-          {showTemplates && (
-            <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 mb-6">
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <h3 className="font-bold text-blue-900">📝 Quick Templates</h3>
-                  <p className="text-sm text-blue-700">Choose a format or speak naturally</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowTemplates(false)}
-                  className="text-blue-700 hover:text-blue-900"
-                >
-                  ✕
-                </button>
-              </div>
-
-              <div className="space-y-3">
-                {SCRIPT_TEMPLATES.map((t, idx) => (
-                  <div key={idx} className="bg-white rounded-lg p-3 border border-blue-200">
-                    <div className="font-semibold text-gray-800 mb-1">{t.name}</div>
-                    <div className="text-xs text-gray-500 mb-2">{t.template}</div>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 text-sm text-gray-700 italic">&ldquo;{t.example}&rdquo;</div>
-                      <button
-                        type="button"
-                        onClick={() => useTemplate(t.example)}
-                        className="px-3 py-1 bg-blue-600 text-white rounded font-medium hover:bg-blue-700 text-sm whitespace-nowrap"
-                      >
-                        Use
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+          {/* Success Message */}
+          {showSuccess && (
+            <div className="bg-green-50 border-2 border-green-300 rounded-xl p-4 mb-6 text-center">
+              <span className="text-2xl">✨</span>
+              <p className="font-bold text-green-900 mt-2">AI Auto-Applied! All fields filled.</p>
             </div>
           )}
 
-          {/* Auto-Suggestions Panel */}
-          {showSuggestions && autoSuggestions && autoSuggestions.suggestions.length > 0 && (
-            <div className="bg-green-50 border-2 border-green-300 rounded-xl p-4 mb-6">
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl">✨</span>
-                  <div>
-                    <h3 className="font-bold text-green-900">AI Detected</h3>
-                    <p className="text-sm text-green-700">
-                      Found {autoSuggestions.detectedKeywords.length} keywords
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowSuggestions(false)}
-                  className="text-green-700 hover:text-green-900"
-                >
-                  ✕
-                </button>
-              </div>
+          {/* Script Templates with Voice Buttons */}
+          <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 mb-6">
+            <div className="mb-3">
+              <h3 className="font-bold text-blue-900">📝 Quick Templates</h3>
+              <p className="text-sm text-blue-700">Click microphone to start speaking</p>
+            </div>
 
-              <div className="space-y-2 mb-3">
-                {autoSuggestions.suggestions.map((sug, idx) => (
-                  <div key={idx} className="flex items-center justify-between bg-white rounded-lg p-3 border border-green-200">
-                    <div className="flex-1">
-                      <div className="font-semibold text-gray-800 capitalize">{sug.field}</div>
-                      <div className="text-sm text-gray-600">{sug.value}</div>
-                      <div className="text-xs text-gray-500">{sug.reason}</div>
-                    </div>
+            <div className="space-y-3">
+              {SCRIPT_TEMPLATES.map((t, idx) => (
+                <div key={idx} className="bg-white rounded-lg p-4 border border-blue-200">
+                  <div className="font-semibold text-gray-800 mb-1">{t.name}</div>
+                  <div className="text-xs text-gray-500 mb-2">{t.template}</div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 text-sm text-gray-700 italic">&ldquo;{t.example}&rdquo;</div>
                     <button
                       type="button"
-                      onClick={() => applySuggestion(sug.field, sug.value)}
-                      className="px-3 py-1 bg-green-600 text-white rounded font-medium hover:bg-green-700 text-sm"
+                      onClick={() => isRecording && recordingTemplate === idx ? stopVoiceRecording() : startVoiceForTemplate(idx)}
+                      disabled={!voiceSupported || processingAgent}
+                      className={`px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
+                        isRecording && recordingTemplate === idx
+                          ? 'bg-red-500 text-white animate-pulse'
+                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                      } disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
-                      Apply
+                      {isRecording && recordingTemplate === idx ? '⏹ Stop' : processingAgent ? '⏳' : '🎤 Speak'}
                     </button>
                   </div>
-                ))}
-              </div>
-
-              <button
-                type="button"
-                onClick={applyAllSuggestions}
-                className="w-full px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700"
-              >
-                ✓ Apply All Suggestions
-              </button>
+                </div>
+              ))}
             </div>
-          )}
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Description with Voice + AI */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                What happened? (Voice or Type)
-              </label>
-              <div className="relative">
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="w-full px-4 py-3 pr-24 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors resize-none"
-                  rows={3}
-                  placeholder="E.g., 'Missed preload vs stroke volume; cardiovascular; confidence 40; rushed'"
-                  required
-                />
-                <div className="absolute right-2 top-2 flex gap-2">
-                  {voiceSupported && (
-                    <button
-                      type="button"
-                      onClick={isRecording ? stopVoiceRecording : startVoiceRecording}
-                      className={`p-2 rounded-lg transition-all ${
-                        isRecording
-                          ? 'bg-red-500 text-white animate-pulse'
-                          : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
-                      }`}
-                      title={isRecording ? 'Stop recording' : 'Start voice input'}
-                    >
-                      {isRecording ? '⏹' : '🎤'}
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={handleSmartProcess}
-                    disabled={!description.trim() || processingAgent}
-                    className="p-2 bg-purple-100 text-purple-600 hover:bg-purple-200 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="AI auto-fill"
-                  >
-                    {processingAgent ? '⏳' : '🤖'}
-                  </button>
-                </div>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                💡 Tip: Use 🎤 to speak or 🤖 to auto-fill fields from your text
-              </p>
-            </div>
-
             {/* System/Topic Row */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -515,10 +348,10 @@ export default function QuickLog() {
         <div className="mt-6 bg-white rounded-xl shadow p-4">
           <h3 className="font-semibold text-gray-800 mb-2">💡 Quick Tips</h3>
           <ul className="text-sm text-gray-600 space-y-1">
-            <li>🎤 <strong>Voice:</strong> Click microphone, speak naturally, AI fills fields</li>
-            <li>⌨️ <strong>Type:</strong> Use templates or write freely, click 🤖 to auto-fill</li>
-            <li>⚡ <strong>Fast:</strong> Just say topic + confidence + system = done in 5 seconds</li>
-            <li>📊 <strong>Smart:</strong> AI learns your patterns and gets better over time</li>
+            <li>🎤 <strong>Voice:</strong> Click microphone on any template and speak naturally</li>
+            <li>✨ <strong>Auto-Fill:</strong> AI detects and fills all fields automatically</li>
+            <li>✏️ <strong>Edit:</strong> Review and adjust any field before submitting</li>
+            <li>⚡ <strong>Fast:</strong> Speak for 5 seconds = fully logged error</li>
           </ul>
         </div>
       </div>
