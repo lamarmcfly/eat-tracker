@@ -436,6 +436,7 @@ export default function ImportPage() {
             </p>
           </div>
         )}
+        {/* CSV Validation Errors */}        {validationResults.length > 0 && uploadMode === "csv" && validationResults.some(r => !r.valid) && (          <div className="bg-red-50 border-2 border-red-200 rounded-xl p-6">            <h3 className="font-bold text-red-800 text-lg mb-3">❌ CSV Upload Failed</h3>            {validationResults.map((result, idx) => (              <div key={idx}>                {result.errors.length > 0 && (                  <div className="mb-3">                    <ul className="text-sm text-red-700 list-disc list-inside space-y-1">                      {result.errors.map((err, i) => (                        <li key={i}>{err}</li>                      ))}                    </ul>                  </div>                )}                {result.warnings.length > 0 && (                  <div>                    <p className="text-sm font-semibold text-yellow-800 mb-1">Suggestions:</p>                    <ul className="text-sm text-yellow-700 list-disc list-inside space-y-1">                      {result.warnings.map((warn, i) => (                        <li key={i}>{warn}</li>                      ))}                    </ul>                  </div>                )}              </div>            ))}          </div>        )}
 
         {/* Validation Results */}
         {validationResults.length > 0 && uploadMode === 'json' && (
