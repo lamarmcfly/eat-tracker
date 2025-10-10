@@ -21,13 +21,16 @@ export default function Home() {
       <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 md:p-8">
         <div className="max-w-6xl mx-auto">
           <div className="flex items-center justify-center gap-8">
-            {/* Left: Logo Space */}
-            <div className="w-48 h-48 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm border-2 border-white/20">
-              <div className="text-center p-4">
-                <div className="text-6xl mb-2">📊</div>
-                <p className="text-xs text-white/80">Logo Space</p>
-                <p className="text-xs text-white/60 mt-1">Add to public/eat-logo.png</p>
-              </div>
+            {/* Left: Logo */}
+            <div className="w-48 h-48 flex items-center justify-center">
+              <Image
+                src="/EAT logo.png"
+                alt="E.A.T. Tracker Logo"
+                width={192}
+                height={192}
+                className="rounded-2xl"
+                priority
+              />
             </div>
 
             {/* Right: Title and subtitle */}
